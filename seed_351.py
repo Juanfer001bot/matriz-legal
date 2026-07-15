@@ -2,12 +2,10 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.models import Base, LegalRequirement
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///./legal_matrix.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from backend.database import SessionLocal, init_db
 
 def seed_351():
+    init_db()
     db = SessionLocal()
     
     # 1. Eliminar la entrada genérica del Decreto 351/1979 si existe
