@@ -90,6 +90,16 @@ def force_test_email():
     except Exception as e:
         return {"status": "error", "message": f"Fallo al enviar correo: {str(e)}"}
 
+from backend.notifications import send_email_alert
+
+@app.get("/api/bot/force-test-email")
+def force_test_email():
+    try:
+        send_email_alert("TEST - Matriz Legal", "Este es un correo de prueba forzado. Si lo ves, el correo funciona bien.")
+        return {"status": "success", "message": "Correo enviado sin errores desde el servidor."}
+    except Exception as e:
+        return {"status": "error", "message": f"Fallo al enviar correo: {str(e)}"}
+
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
