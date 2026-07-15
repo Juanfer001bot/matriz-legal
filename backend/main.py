@@ -69,6 +69,7 @@ async def trigger_scraper(authorization: str = Header(None), db: Session = Depen
 
 from seed_db import seed
 from seed_351 import seed_351
+from .notifications import send_email_alert
 
 # Endpoint temporal para cargar leyes
 @app.get("/api/bot/cargar-leyes-oculto")
@@ -79,6 +80,15 @@ def cargar_leyes():
         return {"status": "success", "message": "Leyes cargadas con éxito"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+# Endpoint temporal para forzar un correo de prueba (y ver errores)
+@app.get("/api/bot/force-test-email")
+def force_test_email():
+    try:
+        send_email_alert("TEST - Matriz Legal", "Este es un correo de prueba forzado. Si lo ves, el correo funciona bien.")
+        return {"status": "success", "message": "Correo enviado sin errores desde el servidor."}
+    except Exception as e:
+        return {"status": "error", "message": f"Fallo al enviar correo: {str(e)}"}
 
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
