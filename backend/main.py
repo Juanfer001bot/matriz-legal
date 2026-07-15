@@ -67,6 +67,19 @@ async def trigger_scraper(authorization: str = Header(None), db: Session = Depen
     await scrape_boletin_oficial(db)
     return {"status": "success", "message": "Scraping ejecutado"}
 
+from seed_db import seed
+from seed_351 import seed_351
+
+# Endpoint temporal para cargar leyes
+@app.get("/api/bot/cargar-leyes-oculto")
+def cargar_leyes():
+    try:
+        seed()
+        seed_351()
+        return {"status": "success", "message": "Leyes cargadas con éxito"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 
