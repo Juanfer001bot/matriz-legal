@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api/requirements';
+const API_URL = '/api/requirements';
 let requirements = [];
 
 // DOM Elements
