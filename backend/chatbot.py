@@ -1,16 +1,10 @@
 import os
-import google.generativeai as genai
+from google import genai
 from sqlalchemy.orm import Session
 from .models import LegalRequirement
 
 # Configurar API de Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    
-# Usamos el modelo más rápido y eficiente para texto
-model = genai.GenerativeModel('gemini-3.5-flash')
 
 async def get_chatbot_response(pregunta: str, db: Session) -> str:
     if not GEMINI_API_KEY:
@@ -39,15 +33,14 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
     contexto += "3. Si usas información de tu conocimiento general, aclara amablemente al final que esa normativa 'no está registrada actualmente en la Matriz Legal de la empresa'.\n"
     contexto += f"3. La pregunta del usuario es: {pregunta}\n"
     
-    # 3. Llamar a Gemini
+    # 3. Llamar a Gemini usando el SDK moderno
     try:
-        response = model.generate_content(contexto)
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=contexto,
+        )
         return response.text
     except Exception as e:
         print(f"Error con Gemini API: {e}")
-        try:
-            available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            model_list = ", ".join(available_models)
-            return f"Lo siento, hubo un error. Detalle: {str(e)}. Modelos disponibles para tu llave: {model_list}"
-        except Exception as e2:
-            return f"Lo siento, hubo un error. Detalle: {str(e)}. (Fallo extra al listar modelos: {str(e2)})"
+        return f"Lo siento, hubo un error al procesar tu solicitud con el cerebro Gemini: {str(e)}"
