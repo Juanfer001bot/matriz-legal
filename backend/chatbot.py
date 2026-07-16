@@ -10,7 +10,7 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     
 # Usamos el modelo más rápido y eficiente para texto
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 async def get_chatbot_response(pregunta: str, db: Session) -> str:
     if not GEMINI_API_KEY:
@@ -44,4 +44,4 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
         return response.text
     except Exception as e:
         print(f"Error con Gemini API: {e}")
-        return "Lo siento, hubo un error al conectar con mi cerebro artificial. Intenta de nuevo más tarde."
+        return f"Lo siento, hubo un error al conectar con mi cerebro artificial. Detalle del error para debugging: {str(e)}"
