@@ -17,38 +17,49 @@ async def scrape_boletin_oficial(db: Session):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             
-            # Buscamos artículos o links de normativas. 
-            # Nota: El BORA carga datos dinámicamente o por POST, esto es una aproximación para la estructura estática o de fallback.
-            # En un entorno real se podría ajustar a la API interna del BORA (por ejemplo /normativa/primera)
-            normativas = []
-            
-            # Ejemplo: Extraeremos basándonos en keywords si encontramos contenedores de texto.
-            # Simulación para el MVP si el DOM no trae normativas directas:
-            # En producción, revisar llamadas XHR del BORA.
-            
-            keywords = ["ambiente", "ambiental", "energía", "energética", "seguridad", "higiene", "residuos", "emisiones"]
-            
-            # Buscaremos todos los textos. Para este MVP, agregaremos una normativa de prueba si no hay datos.
-            # Simulación:
-            simulated_news = [
-                {"titulo": "Resolución 123/2026 - Control de Emisiones", "tipo": "Resolución", "ambito": "Medio Ambiente"},
-            ]
+            keywords = ["ambiente", "ambiental", "energía", "energética", "seguridad", "higiene", "residuos", "emisiones", "presupuesto"] # 'presupuesto' agregado temporalmente para pruebas
             
             nuevas_normativas = []
-            for news in simulated_news:
-                # Comprobar si ya existe
-                existe = db.query(LegalRequirement).filter(LegalRequirement.titulo_tema == news["titulo"]).first()
-                if not existe:
-                    nuevo_req = LegalRequirement(
-                        ambito=news["ambito"],
-                        jurisdiccion="Nacional",
-                        tipo_norma=news["tipo"],
-                        titulo_tema=news["titulo"],
-                        estado_cumplimiento="A Revisar",
-                        estado_vigencia="Vigente"
-                    )
-                    db.add(nuevo_req)
-                    nuevas_normativas.append(nuevo_req)
+            
+            # Buscamos todos los avisos en el HTML del BORA
+            avisos = soup.find_all("div", class_="linea-aviso")
+            
+            for aviso in avisos:
+                # Extraemos el texto de cada párrafo dentro del aviso
+                textos = [p.get_text(strip=True) for p in aviso.find_all("p")]
+                if not textos:
+                    continue
+                    
+                texto_completo = " - ".join(textos)
+                texto_lower = texto_completo.lower()
+                
+                # Verificamos si contiene alguna palabra clave
+                if any(kw in texto_lower for kw in keywords):
+                    
+                    # Extraer partes de la normativa
+                    autoridad = textos[0] if len(textos) > 0 else "Nacional"
+                    tipo_norma = "Normativa"
+                    
+                    if len(textos) > 1:
+                        # Extraer solo la primera palabra ("Decreto", "Resolución", etc.)
+                        tipo_norma = textos[1].split()[0] if " " in textos[1] else textos[1]
+                    
+                    titulo = texto_completo
+                    
+                    # Comprobar si ya existe en la base de datos
+                    existe = db.query(LegalRequirement).filter(LegalRequirement.titulo_tema == titulo).first()
+                    if not existe:
+                        nuevo_req = LegalRequirement(
+                            ambito="Transversal", # Default para scraping automático
+                            jurisdiccion="Nacional",
+                            tipo_norma=tipo_norma,
+                            titulo_tema=titulo,
+                            autoridad_aplicacion=autoridad,
+                            estado_cumplimiento="A Revisar",
+                            estado_vigencia="Vigente"
+                        )
+                        db.add(nuevo_req)
+                        nuevas_normativas.append(nuevo_req)
             
             if nuevas_normativas:
                 db.commit()
