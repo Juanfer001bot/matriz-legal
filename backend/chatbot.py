@@ -10,7 +10,7 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     
 # Usamos el modelo más rápido y eficiente para texto
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 async def get_chatbot_response(pregunta: str, db: Session) -> str:
     if not GEMINI_API_KEY:
