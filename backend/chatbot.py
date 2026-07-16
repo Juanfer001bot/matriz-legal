@@ -35,9 +35,9 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
     
     # 3. Llamar a Gemini usando el SDK moderno y probar varios modelos por problemas de cuota
     client = genai.Client(api_key=GEMINI_API_KEY)
-    modelos = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-pro-latest']
+    modelos = ['gemini-3.1-flash', 'gemini-3.1-flash-lite', 'gemma-4-26b-a4b-it', 'gemini-3-flash-preview']
     
-    ultimo_error = ""
+    errores = []
     for modelo in modelos:
         try:
             response = client.models.generate_content(
@@ -46,8 +46,14 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
             )
             return response.text
         except Exception as e:
-            ultimo_error = str(e)
-            # Si hay error (como limite 0 o cuota agotada), intentamos con el siguiente modelo
+            error_str = str(e)
+            # Solo guardamos el codigo principal del error para no hacer el mensaje gigantesco
+            if "Quota exceeded" in error_str:
+                errores.append(f"{modelo}: Cuota agotada o limite 0")
+            elif "404" in error_str:
+                errores.append(f"{modelo}: No disponible")
+            else:
+                errores.append(f"{modelo}: {error_str[:50]}...")
             continue
             
-    return f"Lo siento, probé con múltiples cerebros y todos fallaron. Detalle del último error: {ultimo_error}"
+    return f"Lo siento, probé con múltiples cerebros y todos fallaron.\nDetalles:\n" + "\n".join(errores)
