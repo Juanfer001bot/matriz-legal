@@ -44,4 +44,9 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
         return response.text
     except Exception as e:
         print(f"Error con Gemini API: {e}")
-        return f"Lo siento, hubo un error al conectar con mi cerebro artificial. Detalle del error para debugging: {str(e)}"
+        try:
+            available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+            model_list = ", ".join(available_models)
+            return f"Lo siento, hubo un error. Detalle: {str(e)}. Modelos disponibles para tu llave: {model_list}"
+        except Exception as e2:
+            return f"Lo siento, hubo un error. Detalle: {str(e)}. (Fallo extra al listar modelos: {str(e2)})"
