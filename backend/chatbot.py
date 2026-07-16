@@ -33,9 +33,10 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
         contexto += f"  Estado: {req.estado_cumplimiento}\n\n"
         
     contexto += "--- FIN DE NORMATIVAS ---\n\n"
-    contexto += "Instrucciones estrictas:\n"
-    contexto += "1. Responde solo con información que esté en la lista anterior.\n"
-    contexto += "2. Si la pregunta no se puede responder con la lista, di: 'No encontré información sobre eso en la Matriz Legal actual.'\n"
+    contexto += "Instrucciones:\n"
+    contexto += "1. Si la pregunta se relaciona con normativas de la lista, prioriza y responde usando esa información de la Matriz Legal.\n"
+    contexto += "2. Si el usuario hace una pregunta general o sobre algo que no está en la lista, puedes responder usando tu amplio conocimiento como Inteligencia Artificial experta en leyes.\n"
+    contexto += "3. Si usas información de tu conocimiento general, aclara amablemente al final que esa normativa 'no está registrada actualmente en la Matriz Legal de la empresa'.\n"
     contexto += f"3. La pregunta del usuario es: {pregunta}\n"
     
     # 3. Llamar a Gemini
