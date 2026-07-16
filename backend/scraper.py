@@ -17,7 +17,7 @@ async def scrape_boletin_oficial(db: Session):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             
-            keywords = ["ambiente", "ambiental", "energía", "energética", "seguridad", "higiene", "residuos", "emisiones", "presupuesto"] # 'presupuesto' agregado temporalmente para pruebas
+            keywords = ["ambiente", "ambiental", "energía", "energética", "seguridad", "higiene", "residuos", "emisiones", "presupuesto"]
             
             nuevas_normativas = []
             
