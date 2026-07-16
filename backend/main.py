@@ -67,6 +67,48 @@ async def trigger_scraper(authorization: str = Header(None), db: Session = Depen
     await scrape_boletin_oficial(db)
     return {"status": "success", "message": "Scraping ejecutado"}
 
+import httpx
+from pydantic import BaseModel
+from typing import Any, Dict
+from .chatbot import get_chatbot_response
+from .notifications import send_telegram_alert, TELEGRAM_BOT_TOKEN
+
+class TelegramWebhook(BaseModel):
+    update_id: int
+    message: Dict[str, Any] = None
+
+@app.post("/api/bot/webhook")
+async def telegram_webhook(update: TelegramWebhook, db: Session = Depends(get_db)):
+    if update.message and "text" in update.message and "chat" in update.message:
+        chat_id = str(update.message["chat"]["id"])
+        texto_usuario = update.message["text"]
+        
+        # Opcional: Podrías verificar si chat_id está en TELEGRAM_CHAT_IDS para seguridad
+        
+        # 1. Avisar que estamos pensando (opcional, pero da buen UX)
+        # 2. Consultar a Gemini
+        respuesta_ia = await get_chatbot_response(texto_usuario, db)
+        
+        # 3. Enviar respuesta usando httpx directamente a ese chat_id
+        if TELEGRAM_BOT_TOKEN:
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            payload = {"chat_id": chat_id, "text": respuesta_ia, "parse_mode": "Markdown"}
+            async with httpx.AsyncClient() as client:
+                await client.post(url, json=payload)
+                
+    return {"status": "ok"}
+
+@app.get("/api/bot/set-webhook")
+async def set_telegram_webhook(url: str):
+    """Llama a este endpoint pasándole la URL de tu app en Render (ej: url=https://matriz-legal.onrender.com/api/bot/webhook)"""
+    if not TELEGRAM_BOT_TOKEN:
+        return {"error": "Falta TELEGRAM_BOT_TOKEN"}
+    
+    tg_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
+    async with httpx.AsyncClient() as client:
+        res = await client.post(tg_url, json={"url": url})
+        return res.json()
+
 from seed_db import seed
 from seed_351 import seed_351
 from .notifications import send_email_alert
