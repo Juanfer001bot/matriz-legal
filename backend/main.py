@@ -92,7 +92,7 @@ async def telegram_webhook(update: TelegramWebhook, db: Session = Depends(get_db
         # 3. Enviar respuesta usando httpx directamente a ese chat_id
         if TELEGRAM_BOT_TOKEN:
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            payload = {"chat_id": chat_id, "text": respuesta_ia, "parse_mode": "Markdown"}
+            payload = {"chat_id": chat_id, "text": respuesta_ia}
             async with httpx.AsyncClient() as client:
                 await client.post(url, json=payload)
                 
