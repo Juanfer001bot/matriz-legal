@@ -17,7 +17,7 @@ async def scrape_boletin_oficial(db: Session):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             
-            keywords = ["ambiente", "ambiental", "energía", "energética", "seguridad", "higiene", "residuos", "emisiones", "presupuesto"]
+            keywords = ["ambiente", "ambiental", "energía", "energética", "seguridad", "higiene", "residuos", "emisiones"]
             
             nuevas_normativas = []
             
@@ -81,7 +81,8 @@ async def scrape_boletin_oficial(db: Session):
                 send_email_alert("Novedades Boletín Oficial - Matriz Legal", mensaje_html)
                 print("Se agregaron nuevas normativas y se enviaron alertas.")
             else:
+                mensaje_vacio = "✅ <b>Matriz Legal OK</b>\n\nEl bot revisó el Boletín Oficial y <b>no encontró</b> normativas de ambiente o seguridad nuevas hoy."
+                await send_telegram_alert(mensaje_vacio)
                 print("No se detectaron nuevas normativas de interés hoy.")
-
     except Exception as e:
         print(f"Error al hacer scraping: {e}")
