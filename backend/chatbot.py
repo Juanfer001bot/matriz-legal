@@ -33,14 +33,21 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
     contexto += "3. Si usas información de tu conocimiento general, aclara amablemente al final que esa normativa 'no está registrada actualmente en la Matriz Legal de la empresa'.\n"
     contexto += f"3. La pregunta del usuario es: {pregunta}\n"
     
-    # 3. Llamar a Gemini usando el SDK moderno
-    try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=contexto,
-        )
-        return response.text
-    except Exception as e:
-        print(f"Error con Gemini API: {e}")
-        return f"Lo siento, hubo un error al procesar tu solicitud con el cerebro Gemini: {str(e)}"
+    # 3. Llamar a Gemini usando el SDK moderno y probar varios modelos por problemas de cuota
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    modelos = ['gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-pro-latest']
+    
+    ultimo_error = ""
+    for modelo in modelos:
+        try:
+            response = client.models.generate_content(
+                model=modelo,
+                contents=contexto,
+            )
+            return response.text
+        except Exception as e:
+            ultimo_error = str(e)
+            # Si hay error (como limite 0 o cuota agotada), intentamos con el siguiente modelo
+            continue
+            
+    return f"Lo siento, probé con múltiples cerebros y todos fallaron. Detalle del último error: {ultimo_error}"
