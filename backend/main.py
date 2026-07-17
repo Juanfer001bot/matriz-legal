@@ -23,6 +23,32 @@ app.add_middleware(
 )
 
 # API Endpoints
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from zoneinfo import ZoneInfo
+from .database import SessionLocal
+
+scheduler = AsyncIOScheduler()
+
+async def scheduled_scraping():
+    db = SessionLocal()
+    try:
+        print("⏰ Ejecutando escaneo automático programado...")
+        await scrape_boletin_oficial(db)
+    except Exception as e:
+        print(f"Error en el escaneo automático: {e}")
+    finally:
+        db.close()
+
+@app.on_event("startup")
+def start_scheduler():
+    tz = ZoneInfo('America/Argentina/Buenos_Aires')
+    trigger = CronTrigger(hour=8, minute=0, timezone=tz)
+    scheduler.add_job(scheduled_scraping, trigger)
+    scheduler.start()
+    print("⏰ Reloj biológico interno iniciado (alarma a las 8:00 AM AR).")
+
 @app.get("/api/requirements", response_model=List[schemas.LegalRequirementResponse])
 def get_requirements(db: Session = Depends(get_db)):
     return db.query(models.LegalRequirement).all()
