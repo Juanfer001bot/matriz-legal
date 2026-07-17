@@ -16,11 +16,10 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
     if not normativas:
         return "Actualmente no tengo ninguna normativa guardada en la base de datos de la Matriz Legal."
     
-    # Comando secreto para forzar el escaneo
     if pregunta.strip().lower() in ["/escanear", "escanear", "buscar leyes", "buscar novedades"]:
         from .scraper import scrape_boletin_oficial
         await scrape_boletin_oficial(db)
-        return "✅ ¡Orden recibida! Acabo de hacer el escaneo de Nación, CABA y Provincia de Bs As. Revisa si te llegó el reporte."
+        return "✅ ¡Orden recibida! Acabo de hacer el escaneo de toda la cuenca (Nación, CABA, Bs As, Misiones, Corrientes y Paraguay). Revisa si te llegó el reporte."
         
     # 2. Construir el contexto
     contexto = "Eres un asistente legal experto. Tu tarea es responder preguntas BASÁNDOTE ÚNICAMENTE en la siguiente lista de normativas de la Matriz Legal de la empresa.\n\n"
