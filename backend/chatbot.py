@@ -84,7 +84,11 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
             # Interceptar si Gemini decidió usar una herramienta
             if response.function_calls:
                 call = response.function_calls[0]
-                args = call.args
+                args = call.args if hasattr(call, 'args') else {}
+                
+                # A veces args puede ser un objeto en vez de dict, lo convertimos por seguridad
+                if not isinstance(args, dict):
+                    args = {k: getattr(args, k) for k in dir(args) if not k.startswith('_')}
                 
                 if call.name == "agregar_norma":
                     nueva = LegalRequirement(
@@ -120,9 +124,16 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
                         return f"✏️ ¡Hecho! Actualicé la norma ID {id_norma}. Su {campo} ahora es: {nuevo_valor}."
                     else:
                         return f"❌ No pude editar. Verifica que el ID {id_norma} sea correcto y que el campo '{campo}' exista."
+                else:
+                    return f"🔧 Intenté usar una herramienta desconocida: {call.name}."
             
             # Si no usó herramientas, devolver su respuesta de texto normal
-            return response.text
+            texto_respuesta = response.text
+            if not texto_respuesta:
+                texto_respuesta = "La Inteligencia Artificial no devolvió ningún texto."
+            # Limpiar asteriscos y guiones bajos para que Telegram no falle con el parse_mode="Markdown"
+            texto_respuesta = texto_respuesta.replace("**", "*").replace("_", "")
+            return texto_respuesta
             
         except Exception as e:
             error_str = str(e)
@@ -131,7 +142,7 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
             elif "404" in error_str:
                 errores.append(f"{modelo}: No disponible")
             else:
-                errores.append(f"{modelo}: {error_str[:50]}...")
+                errores.append(f"{modelo}: Fallo interno - {error_str[:60]}")
             continue
             
     return f"Lo siento, probé con múltiples cerebros y todos fallaron.\nDetalles:\n" + "\n".join(errores)
