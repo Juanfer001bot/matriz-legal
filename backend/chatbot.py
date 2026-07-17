@@ -65,7 +65,7 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
     
     # 3. Llamar a Gemini usando el SDK moderno
     client = genai.Client(api_key=GEMINI_API_KEY)
-    modelos = ['gemini-1.5-flash', 'gemini-1.5-flash-8b', 'gemini-1.5-pro', 'gemini-2.0-flash-exp', 'gemini-flash-latest']
+    modelos = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash']
     
     config = types.GenerateContentConfig(
         tools=[agregar_norma, eliminar_norma, editar_norma],
@@ -73,76 +73,85 @@ async def get_chatbot_response(pregunta: str, db: Session) -> str:
     )
     
     errores = []
-    for modelo in modelos:
-        try:
-            response = client.models.generate_content(
-                model=modelo,
-                contents=contexto,
-                config=config
-            )
-            
-            # Interceptar si Gemini decidió usar una herramienta
-            if response.function_calls:
-                call = response.function_calls[0]
-                args = call.args if hasattr(call, 'args') else {}
+    import asyncio
+    
+    for intento in range(3):
+        for modelo in modelos:
+            try:
+                response = client.models.generate_content(
+                    model=modelo,
+                    contents=contexto,
+                    config=config
+                )
                 
-                # A veces args puede ser un objeto en vez de dict, lo convertimos por seguridad
-                if not isinstance(args, dict):
-                    args = {k: getattr(args, k) for k in dir(args) if not k.startswith('_')}
-                
-                if call.name == "agregar_norma":
-                    nueva = LegalRequirement(
-                        tipo_norma=args.get("tipo_norma", "Normativa"),
-                        titulo_tema=args.get("titulo", ""),
-                        jurisdiccion=args.get("jurisdiccion", "Nacional"),
-                        ambito=args.get("ambito", "Transversal"),
-                        estado_cumplimiento="A Revisar",
-                        estado_vigencia="Vigente"
-                    )
-                    db.add(nueva)
-                    db.commit()
-                    return f"✅ ¡Hecho! Agregué la norma: {nueva.tipo_norma} - {nueva.titulo_tema}."
+                # Interceptar si Gemini decidió usar una herramienta
+                if response.function_calls:
+                    call = response.function_calls[0]
+                    args = call.args if hasattr(call, 'args') else {}
                     
-                elif call.name == "eliminar_norma":
-                    id_norma = args.get("id_norma")
-                    norma = db.query(LegalRequirement).filter(LegalRequirement.id == id_norma).first()
-                    if norma:
-                        db.delete(norma)
+                    if not isinstance(args, dict):
+                        args = {k: getattr(args, k) for k in dir(args) if not k.startswith('_')}
+                    
+                    if call.name == "agregar_norma":
+                        nueva = LegalRequirement(
+                            tipo_norma=args.get("tipo_norma", "Normativa"),
+                            titulo_tema=args.get("titulo", ""),
+                            jurisdiccion=args.get("jurisdiccion", "Nacional"),
+                            ambito=args.get("ambito", "Transversal"),
+                            estado_cumplimiento="A Revisar",
+                            estado_vigencia="Vigente"
+                        )
+                        db.add(nueva)
                         db.commit()
-                        return f"🗑️ ¡Hecho! Eliminé la norma ID {id_norma} ({norma.tipo_norma})."
-                    else:
-                        return f"❌ No pude encontrar la norma con ID {id_norma} para eliminar."
+                        return f"✅ ¡Hecho! Agregué la norma: {nueva.tipo_norma} - {nueva.titulo_tema}."
                         
-                elif call.name == "editar_norma":
-                    id_norma = args.get("id_norma")
-                    campo = args.get("campo")
-                    nuevo_valor = args.get("nuevo_valor")
-                    norma = db.query(LegalRequirement).filter(LegalRequirement.id == id_norma).first()
-                    if norma and hasattr(norma, campo):
-                        setattr(norma, campo, nuevo_valor)
-                        db.commit()
-                        return f"✏️ ¡Hecho! Actualicé la norma ID {id_norma}. Su {campo} ahora es: {nuevo_valor}."
+                    elif call.name == "eliminar_norma":
+                        id_norma = args.get("id_norma")
+                        norma = db.query(LegalRequirement).filter(LegalRequirement.id == id_norma).first()
+                        if norma:
+                            db.delete(norma)
+                            db.commit()
+                            return f"🗑️ ¡Hecho! Eliminé la norma ID {id_norma} ({norma.tipo_norma})."
+                        else:
+                            return f"❌ No pude encontrar la norma con ID {id_norma} para eliminar."
+                            
+                    elif call.name == "editar_norma":
+                        id_norma = args.get("id_norma")
+                        campo = args.get("campo")
+                        nuevo_valor = args.get("nuevo_valor")
+                        norma = db.query(LegalRequirement).filter(LegalRequirement.id == id_norma).first()
+                        if norma and hasattr(norma, campo):
+                            setattr(norma, campo, nuevo_valor)
+                            db.commit()
+                            return f"✏️ ¡Hecho! Actualicé la norma ID {id_norma}. Su {campo} ahora es: {nuevo_valor}."
+                        else:
+                            return f"❌ No pude editar. Verifica que el ID {id_norma} sea correcto."
                     else:
-                        return f"❌ No pude editar. Verifica que el ID {id_norma} sea correcto y que el campo '{campo}' exista."
+                        return f"🔧 Intenté usar una herramienta desconocida: {call.name}."
+                
+                texto_respuesta = response.text
+                if not texto_respuesta:
+                    texto_respuesta = "La Inteligencia Artificial no devolvió ningún texto."
+                texto_respuesta = texto_respuesta.replace("**", "*").replace("_", "")
+                return texto_respuesta
+                
+            except Exception as e:
+                error_str = str(e)
+                if "Quota exceeded" in error_str:
+                    errores.append(f"{modelo}: Cuota agotada")
+                elif "404" in error_str:
+                    errores.append(f"{modelo}: No disponible")
+                elif "503" in error_str:
+                    errores.append(f"{modelo}: Servidor sobrecargado (503)")
                 else:
-                    return f"🔧 Intenté usar una herramienta desconocida: {call.name}."
+                    errores.append(f"{modelo}: Fallo interno - {error_str[:30]}")
+                continue
+        
+        # Si todos fallaron en este intento y hay un 503, esperar 2 segundos y reintentar
+        if any("503" in err for err in errores):
+            await asyncio.sleep(2)
+            errores.clear() # Limpiar errores para el próximo intento
+        else:
+            break # Si el error no es 503 (ej. cuota o 404), no vale la pena reintentar
             
-            # Si no usó herramientas, devolver su respuesta de texto normal
-            texto_respuesta = response.text
-            if not texto_respuesta:
-                texto_respuesta = "La Inteligencia Artificial no devolvió ningún texto."
-            # Limpiar asteriscos y guiones bajos para que Telegram no falle con el parse_mode="Markdown"
-            texto_respuesta = texto_respuesta.replace("**", "*").replace("_", "")
-            return texto_respuesta
-            
-        except Exception as e:
-            error_str = str(e)
-            if "Quota exceeded" in error_str:
-                errores.append(f"{modelo}: Cuota agotada o limite 0")
-            elif "404" in error_str:
-                errores.append(f"{modelo}: No disponible")
-            else:
-                errores.append(f"{modelo}: Fallo interno - {error_str[:60]}")
-            continue
-            
-    return f"Lo siento, probé con múltiples cerebros y todos fallaron.\nDetalles:\n" + "\n".join(errores)
+    return f"Lo siento, los servidores de Google están saturados en este momento.\nDetalles:\n" + "\n".join(errores)
