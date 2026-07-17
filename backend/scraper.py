@@ -24,10 +24,19 @@ async def scrape_nacion(client, db: Session):
                     titulo = texto_completo
                     existe = db.query(LegalRequirement).filter(LegalRequirement.titulo_tema == titulo).first()
                     if not existe:
-                        tipo_norma = textos[1].split()[0] if len(textos)>1 and " " in textos[1] else "Normativa"
+                        import re
+                        patron = r"(Ley|Decreto|Resolución|Disposición|Decisión Administrativa|Aviso)\s*(?:N°|Nro\.)?\s*([\d\.]+/?\d*)"
+                        match = re.search(patron, titulo, re.IGNORECASE)
+                        if match:
+                            tipo_norma = f"{match.group(1).capitalize()} {match.group(2)}"
+                            numero_anio = match.group(2)
+                        else:
+                            tipo_norma = textos[1].split()[0] if len(textos)>1 and " " in textos[1] else "Normativa"
+                            numero_anio = ""
+                            
                         req = LegalRequirement(
                             ambito="Transversal", jurisdiccion="Nacional",
-                            tipo_norma=tipo_norma, titulo_tema=titulo,
+                            tipo_norma=tipo_norma, numero_anio=numero_anio, titulo_tema=titulo,
                             autoridad_aplicacion=textos[0] if textos else "Nacional",
                             estado_cumplimiento="A Revisar", estado_vigencia="Vigente"
                         )
