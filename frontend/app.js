@@ -39,6 +39,27 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchMe();
 });
 
+// Theme Toggle Logic
+const btnThemeToggle = document.getElementById('btnThemeToggle');
+if (btnThemeToggle) {
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    if (currentTheme === 'light') {
+        document.documentElement.classList.add('light-mode');
+        btnThemeToggle.textContent = '🌙 Oscuro';
+    }
+
+    btnThemeToggle.addEventListener('click', () => {
+        document.documentElement.classList.toggle('light-mode');
+        if (document.documentElement.classList.contains('light-mode')) {
+            localStorage.setItem('theme', 'light');
+            btnThemeToggle.textContent = '🌙 Oscuro';
+        } else {
+            localStorage.setItem('theme', 'dark');
+            btnThemeToggle.textContent = '☀️ Claro';
+        }
+    });
+}
+
 async function fetchMe() {
     try {
         const res = await fetch('/api/me', {

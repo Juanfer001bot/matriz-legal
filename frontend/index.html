@@ -6,6 +6,11 @@
     <title>Matriz Legal de Cumplimiento - Bertolo Narganes | Consultoría Ambiental y HSEQ</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script>
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.classList.add('light-mode');
+        }
+    </script>
 </head>
 <body>
     <div class="background-glow"></div>
@@ -26,6 +31,7 @@
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
                 <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
                 <button class="btn-secondary" id="btnAdmin" style="display: none;" onclick="window.location.href='/admin.html';">Usuarios</button>
+                <button class="btn-secondary" id="btnThemeToggle">☀️ Claro</button>
                 <button class="btn-secondary" onclick="localStorage.removeItem('token'); window.location.href='/login.html';">Cerrar Sesión</button>
             </div>
         </div>

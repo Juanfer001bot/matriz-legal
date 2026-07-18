@@ -9,6 +9,27 @@ const API_WORKSPACES = '/api/workspaces';
 
 let globalWorkspaces = [];
 
+// Theme Toggle Logic
+const btnThemeToggle = document.getElementById('btnThemeToggle');
+if (btnThemeToggle) {
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    if (currentTheme === 'light') {
+        document.documentElement.classList.add('light-mode');
+        btnThemeToggle.textContent = '🌙 Oscuro';
+    }
+
+    btnThemeToggle.addEventListener('click', () => {
+        document.documentElement.classList.toggle('light-mode');
+        if (document.documentElement.classList.contains('light-mode')) {
+            localStorage.setItem('theme', 'light');
+            btnThemeToggle.textContent = '🌙 Oscuro';
+        } else {
+            localStorage.setItem('theme', 'dark');
+            btnThemeToggle.textContent = '☀️ Claro';
+        }
+    });
+}
+
 const usersBody = document.getElementById('usersBody');
 const registerForm = document.getElementById('registerForm');
 const msg = document.getElementById('msg');
