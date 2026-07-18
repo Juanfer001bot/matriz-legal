@@ -14,10 +14,9 @@ from backend.auth import get_password_hash
 def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx", email="juan@test.com"):
     print("Iniciando reseteo de la base de datos...")
     
-    # Drop and recreate tables
-    Base.metadata.drop_all(bind=engine)
+    # Create tables if they don't exist
     Base.metadata.create_all(bind=engine)
-    print("Base de datos limpia creada.")
+    print("Tablas verificadas/creadas.")
 
     if not os.path.exists(excel_path):
         raise FileNotFoundError(f"Error: No se encontró el archivo {excel_path} en el directorio actual: {os.getcwd()}")
