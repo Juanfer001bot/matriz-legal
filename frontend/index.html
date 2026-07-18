@@ -15,7 +15,7 @@
             <p style="color: var(--text-secondary); margin-top: 5px; font-size: 0.95rem;">Monitoreo inteligente de Ambiente, Seguridad, Higiene y Energía</p>
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
-                <button class="btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color);" onclick="window.location.href='/admin.html';">Usuarios</button>
+                <button class="btn" id="btnAdmin" style="display: none; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border-color);" onclick="window.location.href='/admin.html';">Usuarios</button>
                 <button class="btn" style="background: var(--bg-card); border: 1px solid var(--border-color);" onclick="localStorage.removeItem('token'); window.location.href='/login.html';">Cerrar Sesión</button>
             </div>
         </div>

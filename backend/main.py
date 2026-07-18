@@ -54,7 +54,10 @@ def on_startup():
 
 # Auth Endpoints
 @app.post("/api/register", response_model=schemas.UserResponse)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -90,12 +93,20 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
     return new_user
 
+@app.get("/api/me", response_model=schemas.UserResponse)
+def get_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
 @app.get("/api/users", response_model=List[schemas.UserResponse])
 def get_users(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
     return db.query(models.User).all()
 
 @app.put("/api/users/{user_id}", response_model=schemas.UserResponse)
 def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -108,11 +119,13 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
 
 @app.delete("/api/users/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
-    if db_user.id == 1:
+    if db_user.id == 1 or db_user.email == "juan@test.com":
         raise HTTPException(status_code=400, detail="No se puede eliminar el administrador")
         
     db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == user_id).delete()

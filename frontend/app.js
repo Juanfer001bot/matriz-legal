@@ -17,9 +17,29 @@ const modal = document.getElementById('modalForm');
 const closeBtn = document.querySelector('.close-btn');
 const btnNewReq = document.getElementById('btnNewReq');
 const reqForm = document.getElementById('reqForm');
+const btnAdmin = document.getElementById('btnAdmin');
 
 // Event Listeners
-document.addEventListener('DOMContentLoaded', fetchRequirements);
+document.addEventListener('DOMContentLoaded', () => {
+    fetchMe();
+    fetchRequirements();
+});
+
+async function fetchMe() {
+    try {
+        const res = await fetch('/api/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const user = await res.json();
+            if (user.email === 'juan@test.com' && btnAdmin) {
+                btnAdmin.style.display = 'inline-block';
+            }
+        }
+    } catch (e) {
+        console.error('Error fetching user info', e);
+    }
+}
 searchBox.addEventListener('input', renderTable);
 filterAmbito.addEventListener('change', renderTable);
 filterEstado.addEventListener('change', renderTable);
