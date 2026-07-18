@@ -68,7 +68,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_us
     db.refresh(new_user)
     
     # Clonar las normativas del usuario administrador (id = 1)
-    admin_reqs = db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == 1).all()
+    admin_reqs = db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == 1).order_by(models.LegalRequirement.id.asc()).all()
     if admin_reqs:
         for r in admin_reqs:
             req_clone = models.LegalRequirement(
@@ -148,7 +148,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 # Protected CRUD Endpoints
 @app.get("/api/requirements", response_model=List[schemas.LegalRequirementResponse])
 def get_requirements(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == current_user.id).all()
+    return db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == current_user.id).order_by(models.LegalRequirement.id.asc()).all()
 
 @app.post("/api/requirements", response_model=schemas.LegalRequirementResponse)
 def create_requirement(req: schemas.LegalRequirementCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
