@@ -13,55 +13,28 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
-            background-color: var(--bg-main);
+            background-color: var(--bg-color);
         }
         .login-card {
-            background-color: var(--bg-card);
-            padding: 40px;
-            border-radius: var(--radius-lg);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
             width: 100%;
             max-width: 400px;
             text-align: center;
-            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
         .login-card h2 {
             margin-top: 0;
-            color: var(--text-primary);
+            font-size: 2rem;
+            background: linear-gradient(to right, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .login-form {
             display: flex;
             flex-direction: column;
             gap: 20px;
-            margin-top: 25px;
-        }
-        .login-form input {
-            padding: 12px 15px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border-color);
-            background-color: rgba(255, 255, 255, 0.05);
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-        .login-form input:focus {
-            outline: none;
-            border-color: var(--primary-light);
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        .login-form button {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: var(--radius-sm);
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .login-form button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.3);
+            margin-top: 20px;
         }
         .error-msg {
             color: #ff4d4d;
@@ -72,14 +45,15 @@
     </style>
 </head>
 <body>
-    <div class="login-card">
+    <div class="background-glow"></div>
+    <div class="login-card glass">
         <h2>Iniciar Sesión</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 20px;">Accede a tu matriz legal privada</p>
+        <p style="color: var(--text-muted); margin-bottom: 10px;">Accede a tu matriz legal privada</p>
         
         <form class="login-form" id="loginForm">
             <input type="email" id="email" placeholder="Correo Electrónico" required>
             <input type="password" id="password" placeholder="Contraseña" required>
-            <button type="submit">Ingresar</button>
+            <button type="submit" class="btn">Ingresar</button>
         </form>
         <p id="errorMsg" class="error-msg">Credenciales incorrectas</p>
     </div>
