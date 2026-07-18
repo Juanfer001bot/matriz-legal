@@ -27,13 +27,13 @@ async def scrape_nacion(client, db: Session):
                 
                 if any(kw in texto_completo.lower() for kw in KEYWORDS):
                     titulo = texto_completo
-                    from .models import User
-                    users = db.query(User).all()
+                    from .models import Workspace
+                    workspaces = db.query(Workspace).all()
                     
-                    for user in users:
+                    for ws in workspaces:
                         existe = db.query(LegalRequirement).filter(
                             LegalRequirement.titulo == titulo,
-                            LegalRequirement.user_id == user.id
+                            LegalRequirement.workspace_id == ws.id
                         ).first()
                         
                         if not existe:
@@ -49,7 +49,7 @@ async def scrape_nacion(client, db: Session):
                                 
                             today_str = datetime.now().strftime('%d/%m/%Y')
                             req = LegalRequirement(
-                                user_id=user.id,
+                                workspace_id=ws.id,
                                 tipo_norma=tipo_norma,
                                 numero=numero_anio,
                                 anio_fecha=today_str,
@@ -85,17 +85,17 @@ async def scrape_caba(client, db: Session):
                     textos_brutos.append(texto_completo)
                     if any(kw in texto_completo.lower() for kw in KEYWORDS):
                         titulo = texto_completo
-                        from .models import User
-                        users = db.query(User).all()
-                        for user in users:
+                        from .models import Workspace
+                        workspaces = db.query(Workspace).all()
+                        for ws in workspaces:
                             existe = db.query(LegalRequirement).filter(
                                 LegalRequirement.titulo == titulo,
-                                LegalRequirement.user_id == user.id
+                                LegalRequirement.workspace_id == ws.id
                             ).first()
                             
                             if not existe:
                                 req = LegalRequirement(
-                                    user_id=user.id,
+                                    workspace_id=ws.id,
                                     tipo_norma=norma.get('tipo_norma_desc', 'Normativa'),
                                     anio_fecha=today_caba,
                                     jurisdiccion_nacional="Argentina",
@@ -130,17 +130,17 @@ async def scrape_pba(client, db: Session):
                     texto = res.get_text(strip=True)
                     textos_brutos.append(texto)
                     
-                    from .models import User
-                    users = db.query(User).all()
-                    for user in users:
+                    from .models import Workspace
+                    workspaces = db.query(Workspace).all()
+                    for ws in workspaces:
                         existe = db.query(LegalRequirement).filter(
                             LegalRequirement.titulo == texto,
-                            LegalRequirement.user_id == user.id
+                            LegalRequirement.workspace_id == ws.id
                         ).first()
                         
                         if not existe and texto:
                             req = LegalRequirement(
-                                user_id=user.id,
+                                workspace_id=ws.id,
                                 tipo_norma="Normativa",
                                 anio_fecha=today_pba,
                                 jurisdiccion_nacional="Argentina",
@@ -202,19 +202,19 @@ async def scrape_pdf_jurisdiccion(client, db: Session, url: str, jurisdiccion: s
                             
                             titulo_con_fecha = f"{titulo} ({today_str})"
                             
-                            from .models import User
-                            users = db.query(User).all()
-                            for user in users:
+                            from .models import Workspace
+                            workspaces = db.query(Workspace).all()
+                            for ws in workspaces:
                                 existe = db.query(LegalRequirement).filter(
                                     LegalRequirement.jurisdiccion_local == jurisdiccion, 
                                     LegalRequirement.titulo == titulo_con_fecha,
-                                    LegalRequirement.user_id == user.id
+                                    LegalRequirement.workspace_id == ws.id
                                 ).first()
                                 
                                 if not existe:
                                     nacion_str = "Paraguay" if jurisdiccion == "Paraguay" else "Argentina"
                                     req = LegalRequirement(
-                                        user_id=user.id,
+                                        workspace_id=ws.id,
                                         tipo_norma=tipo,
                                         anio_fecha=today_str,
                                         jurisdiccion_nacional=nacion_str,

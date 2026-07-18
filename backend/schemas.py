@@ -1,25 +1,40 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+class WorkspaceBase(BaseModel):
+    name: str
+
+class WorkspaceCreate(WorkspaceBase):
+    pass
+
+class WorkspaceResponse(WorkspaceBase):
+    id: int
+    class Config:
+        from_attributes = True
+
 class UserCreate(BaseModel):
     email: str
     password: str
+    workspace_ids: List[int] = []
 
 class UserUpdate(BaseModel):
     password: Optional[str] = None
+    workspace_ids: Optional[List[int]] = None
 
 class UserResponse(BaseModel):
     id: int
     email: str
+    workspaces: List[WorkspaceResponse] = []
 
     class Config:
         from_attributes = True
 
 class LegalRequirementBase(BaseModel):
+    workspace_id: Optional[int] = None
     tipo_norma: Optional[str] = ""
     numero: Optional[str] = ""
     anio_fecha: Optional[str] = ""

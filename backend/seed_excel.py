@@ -8,7 +8,7 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import engine, SessionLocal
-from backend.models import Base, LegalRequirement, User
+from backend.models import Base, LegalRequirement, User, Workspace
 from backend.auth import get_password_hash
 
 def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx", email="juan@test.com"):
@@ -29,17 +29,35 @@ def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx", email="juan@test.c
     db: Session = SessionLocal()
     
     # Crear usuario default si no existe
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        user = User(email=email, hashed_password=get_password_hash("password123"))
-        db.add(user)
+    admin_user = db.query(User).filter(User.email == email).first()
+    if not admin_user:
+        admin_user = User(email=email, hashed_password=get_password_hash("admin123"))
+        db.add(admin_user)
         db.commit()
-        db.refresh(user)
-    
+        db.refresh(admin_user)
+        
+    # Ensure default workspace exists
+    default_ws = db.query(Workspace).filter(Workspace.id == 1).first()
+    if not default_ws:
+        default_ws = Workspace(id=1, name="Principal")
+        db.add(default_ws)
+        db.commit()
+        db.refresh(default_ws)
+        
+    if default_ws not in admin_user.workspaces:
+        admin_user.workspaces.append(default_ws)
+        db.commit()
+
+    # Check if already seeded
+    existing_count = db.query(LegalRequirement).count()
+    if existing_count > 0:
+        print(f"La base de datos ya contiene {existing_count} registros. Omitiendo la carga inicial.")
+        return existing_count
+
     agregados = 0
     for _, row in df.iterrows():
         req = LegalRequirement(
-            user_id=user.id,
+            workspace_id=default_ws.id,
             tipo_norma=str(row.get('Tipo de norma', '')),
             numero=str(row.get('Numero', '')),
             anio_fecha=str(row.get('Año / Fecha de Publicación', '')),

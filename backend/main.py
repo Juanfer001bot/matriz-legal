@@ -67,12 +67,36 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_us
     db.commit()
     db.refresh(new_user)
     
-    # Clonar las normativas del usuario administrador (id = 1)
-    admin_reqs = db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == 1).order_by(models.LegalRequirement.id.asc()).all()
+    # link workspaces
+    if user.workspace_ids:
+        workspaces = db.query(models.Workspace).filter(models.Workspace.id.in_(user.workspace_ids)).all()
+        new_user.workspaces.extend(workspaces)
+        db.commit()
+        db.refresh(new_user)
+
+    return new_user
+
+@app.get("/api/workspaces", response_model=List[schemas.WorkspaceResponse])
+def get_workspaces(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return db.query(models.Workspace).all()
+
+@app.post("/api/workspaces", response_model=schemas.WorkspaceResponse)
+def create_workspace(workspace: schemas.WorkspaceCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    new_ws = models.Workspace(name=workspace.name)
+    db.add(new_ws)
+    db.commit()
+    db.refresh(new_ws)
+    
+    # Clonar matriz original (del workspace 1, asumiendo que 1 es el principal)
+    admin_reqs = db.query(models.LegalRequirement).filter(models.LegalRequirement.workspace_id == 1).order_by(models.LegalRequirement.id.asc()).all()
     if admin_reqs:
         for r in admin_reqs:
             req_clone = models.LegalRequirement(
-                user_id=new_user.id,
+                workspace_id=new_ws.id,
                 tipo_norma=r.tipo_norma,
                 numero=r.numero,
                 anio_fecha=r.anio_fecha,
@@ -90,8 +114,23 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_us
             )
             db.add(req_clone)
         db.commit()
+    return new_ws
 
-    return new_user
+@app.delete("/api/workspaces/{workspace_id}")
+def delete_workspace(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if workspace_id == 1:
+        raise HTTPException(status_code=400, detail="Cannot delete master workspace")
+        
+    db_ws = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
+    if not db_ws:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+        
+    db.query(models.LegalRequirement).filter(models.LegalRequirement.workspace_id == workspace_id).delete()
+    db.delete(db_ws)
+    db.commit()
+    return {"status": "deleted"}
 
 @app.get("/api/me", response_model=schemas.UserResponse)
 def get_me(current_user: models.User = Depends(get_current_user)):
@@ -113,8 +152,13 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
     
     if user_update.password:
         db_user.hashed_password = get_password_hash(user_update.password)
-        db.commit()
-        db.refresh(db_user)
+    
+    if user_update.workspace_ids is not None:
+        workspaces = db.query(models.Workspace).filter(models.Workspace.id.in_(user_update.workspace_ids)).all()
+        db_user.workspaces = workspaces
+
+    db.commit()
+    db.refresh(db_user)
     return db_user
 
 @app.delete("/api/users/{user_id}")
@@ -128,7 +172,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: model
     if db_user.id == 1 or db_user.email == "juan@test.com":
         raise HTTPException(status_code=400, detail="No se puede eliminar el administrador")
         
-    db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == user_id).delete()
     db.delete(db_user)
     db.commit()
     return {"status": "deleted"}
@@ -147,12 +190,31 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 # Protected CRUD Endpoints
 @app.get("/api/requirements", response_model=List[schemas.LegalRequirementResponse])
-def get_requirements(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    return db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == current_user.id).order_by(models.LegalRequirement.id.asc()).all()
+def get_requirements(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not workspace_id:
+        if current_user.workspaces:
+            workspace_id = current_user.workspaces[0].id
+        else:
+            return []
+            
+    if current_user.email != "juan@test.com" and workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized for this workspace")
+        
+    return db.query(models.LegalRequirement).filter(models.LegalRequirement.workspace_id == workspace_id).order_by(models.LegalRequirement.id.asc()).all()
 
 @app.post("/api/requirements", response_model=schemas.LegalRequirementResponse)
 def create_requirement(req: schemas.LegalRequirementCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    db_req = models.LegalRequirement(**req.dict(), user_id=current_user.id)
+    workspace_id = req.workspace_id
+    if not workspace_id:
+        if current_user.workspaces:
+            workspace_id = current_user.workspaces[0].id
+        else:
+            raise HTTPException(status_code=400, detail="No workspace provided")
+            
+    if current_user.email != "juan@test.com" and workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    db_req = models.LegalRequirement(**req.dict(exclude={'workspace_id'}), workspace_id=workspace_id)
     db.add(db_req)
     db.commit()
     db.refresh(db_req)
@@ -160,11 +222,14 @@ def create_requirement(req: schemas.LegalRequirementCreate, db: Session = Depend
 
 @app.put("/api/requirements/{req_id}", response_model=schemas.LegalRequirementResponse)
 def update_requirement(req_id: int, req: schemas.LegalRequirementCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id, models.LegalRequirement.user_id == current_user.id).first()
+    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id).first()
     if not db_req:
-        raise HTTPException(status_code=404, detail="Requirement not found or not owned by user")
+        raise HTTPException(status_code=404, detail="Requirement not found")
+        
+    if current_user.email != "juan@test.com" and db_req.workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized")
     
-    for key, value in req.dict(exclude_unset=True).items():
+    for key, value in req.dict(exclude_unset=True, exclude={'workspace_id'}).items():
         setattr(db_req, key, value)
         
     db.commit()
@@ -173,9 +238,12 @@ def update_requirement(req_id: int, req: schemas.LegalRequirementCreate, db: Ses
 
 @app.delete("/api/requirements/{req_id}")
 def delete_requirement(req_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id, models.LegalRequirement.user_id == current_user.id).first()
+    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id).first()
     if not db_req:
-        raise HTTPException(status_code=404, detail="Requirement not found or not owned by user")
+        raise HTTPException(status_code=404, detail="Requirement not found")
+        
+    if current_user.email != "juan@test.com" and db_req.workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized")
     
     db.delete(db_req)
     db.commit()

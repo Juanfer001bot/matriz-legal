@@ -1,7 +1,22 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
+
+user_workspaces = Table(
+    'user_workspaces',
+    Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('workspace_id', Integer, ForeignKey('workspaces.id'))
+)
+
+class Workspace(Base):
+    __tablename__ = "workspaces"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    
+    users = relationship("User", secondary=user_workspaces, back_populates="workspaces")
+    requirements = relationship("LegalRequirement", back_populates="workspace")
 
 class User(Base):
     __tablename__ = "users"
@@ -10,13 +25,13 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
 
-    requirements = relationship("LegalRequirement", back_populates="owner")
+    workspaces = relationship("Workspace", secondary=user_workspaces, back_populates="users")
 
 class LegalRequirement(Base):
     __tablename__ = "legal_requirements"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"))
     
     tipo_norma = Column(String, default="")
     numero = Column(String, default="")
@@ -33,5 +48,5 @@ class LegalRequirement(Base):
     evidencia_cumplimiento = Column(Text, default="")
     estado_cumplimiento = Column(String, default="")
 
-    owner = relationship("User", back_populates="requirements")
+    workspace = relationship("Workspace", back_populates="requirements")
 

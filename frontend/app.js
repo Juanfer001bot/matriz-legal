@@ -24,11 +24,19 @@ const closePasswordModal = document.getElementById('closePasswordModal');
 const passwordForm = document.getElementById('passwordForm');
 const passwordMsg = document.getElementById('passwordMsg');
 let currentUserId = null;
+let currentWorkspaceId = null;
+
+const workspaceContainer = document.getElementById('workspaceContainer');
+const workspaceSelect = document.getElementById('workspaceSelect');
+
+workspaceSelect.addEventListener('change', () => {
+    currentWorkspaceId = workspaceSelect.value;
+    fetchRequirements();
+});
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
     fetchMe();
-    fetchRequirements();
 });
 
 async function fetchMe() {
@@ -41,6 +49,24 @@ async function fetchMe() {
             currentUserId = user.id;
             if (user.email === 'juan@test.com' && btnAdmin) {
                 btnAdmin.style.display = 'inline-block';
+            }
+            
+            if (user.workspaces && user.workspaces.length > 0) {
+                workspaceSelect.innerHTML = '';
+                user.workspaces.forEach(ws => {
+                    const opt = document.createElement('option');
+                    opt.value = ws.id;
+                    opt.textContent = ws.name;
+                    workspaceSelect.appendChild(opt);
+                });
+                
+                if (user.workspaces.length > 1) {
+                    workspaceContainer.style.display = 'flex';
+                }
+                currentWorkspaceId = workspaceSelect.value;
+                fetchRequirements();
+            } else {
+                fetchRequirements();
             }
         }
     } catch (e) {
@@ -134,6 +160,10 @@ reqForm.addEventListener('submit', async (e) => {
         evidencia_cumplimiento: document.getElementById('evidencia_cumplimiento').value,
         estado_cumplimiento: document.getElementById('estado_cumplimiento').value
     };
+    
+    if (!id && currentWorkspaceId) {
+        data.workspace_id = parseInt(currentWorkspaceId);
+    }
 
     try {
         const method = id ? 'PUT' : 'POST';
@@ -167,7 +197,8 @@ reqForm.addEventListener('submit', async (e) => {
 
 async function fetchRequirements() {
     try {
-        const response = await fetch(API_URL, {
+        const url = currentWorkspaceId ? `${API_URL}?workspace_id=${currentWorkspaceId}` : API_URL;
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         

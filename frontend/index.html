@@ -13,7 +13,13 @@
         <div class="header-content">
             <h1>Matriz Legal de Cumplimiento - Bertolo Narganes | Consultoría Ambiental y HSEQ</h1>
             <p style="color: var(--text-secondary); margin-top: 5px; font-size: 0.95rem;">Monitoreo inteligente de Ambiente, Seguridad, Higiene y Energía</p>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
+            
+            <div id="workspaceContainer" style="display: none; margin-top: 15px; margin-bottom: 5px; align-items: center; gap: 10px;">
+                <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0;">Equipo activo:</label>
+                <select id="workspaceSelect" style="max-width: 250px; padding: 5px 10px; font-size: 0.9rem;"></select>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
                 <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
                 <button class="btn-secondary" id="btnAdmin" style="display: none;" onclick="window.location.href='/admin.html';">Usuarios</button>
