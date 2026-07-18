@@ -142,8 +142,8 @@ from .notifications import send_email_alert
 @app.get("/api/bot/cargar-leyes-oculto")
 def cargar_leyes():
     try:
-        seed_from_excel("Matriz Legal Integrada.xlsx")
-        return {"status": "success", "message": "Leyes cargadas con éxito desde Excel"}
+        count = seed_from_excel("Matriz Legal Integrada.xlsx")
+        return {"status": "success", "message": f"Leyes cargadas con éxito desde Excel. Total insertadas: {count}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

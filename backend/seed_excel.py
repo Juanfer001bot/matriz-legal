@@ -19,8 +19,7 @@ def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx"):
     print("Base de datos limpia creada.")
 
     if not os.path.exists(excel_path):
-        print(f"Error: No se encontró el archivo {excel_path}")
-        return
+        raise FileNotFoundError(f"Error: No se encontró el archivo {excel_path} en el directorio actual: {os.getcwd()}")
 
     print("Leyendo Excel...")
     df = pd.read_excel(excel_path)
@@ -55,9 +54,11 @@ def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx"):
     try:
         db.commit()
         print(f"¡Éxito! Se han importado {agregados} requisitos a la matriz.")
+        return agregados
     except Exception as e:
         db.rollback()
         print(f"Error al guardar en base de datos: {e}")
+        raise e
     finally:
         db.close()
 
