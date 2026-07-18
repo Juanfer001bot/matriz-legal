@@ -24,6 +24,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    allowed_jurisdictions = Column(String, default="[]")
 
     workspaces = relationship("Workspace", secondary=user_workspaces, back_populates="users")
 

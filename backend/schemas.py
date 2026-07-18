@@ -20,15 +20,18 @@ class UserCreate(BaseModel):
     email: str
     password: str
     workspace_ids: List[int] = []
+    allowed_jurisdictions: str = "[]"
 
 class UserUpdate(BaseModel):
     password: Optional[str] = None
     workspace_ids: Optional[List[int]] = None
+    allowed_jurisdictions: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: int
     email: str
     workspaces: List[WorkspaceResponse] = []
+    allowed_jurisdictions: str = "[]"
 
     class Config:
         from_attributes = True

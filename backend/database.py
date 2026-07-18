@@ -19,8 +19,16 @@ else:
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+from sqlalchemy import text
+
 def init_db():
     Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE users ADD COLUMN allowed_jurisdictions VARCHAR DEFAULT '[]'"))
+            conn.commit()
+        except Exception:
+            pass # column already exists
 
 def get_db():
     db = SessionLocal()

@@ -9,7 +9,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from zoneinfo import ZoneInfo
 import httpx
+import json
 from pydantic import BaseModel
+from sqlalchemy import or_
 
 from . import models, schemas
 from .database import engine, init_db, get_db, SessionLocal
@@ -73,6 +75,10 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_us
         new_user.workspaces.extend(workspaces)
         db.commit()
         db.refresh(new_user)
+        
+    new_user.allowed_jurisdictions = user.allowed_jurisdictions
+    db.commit()
+    db.refresh(new_user)
 
     return new_user
 
@@ -156,6 +162,9 @@ def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Dep
     if user_update.workspace_ids is not None:
         workspaces = db.query(models.Workspace).filter(models.Workspace.id.in_(user_update.workspace_ids)).all()
         db_user.workspaces = workspaces
+        
+    if user_update.allowed_jurisdictions is not None:
+        db_user.allowed_jurisdictions = user_update.allowed_jurisdictions
 
     db.commit()
     db.refresh(db_user)
@@ -200,7 +209,37 @@ def get_requirements(workspace_id: int = None, db: Session = Depends(get_db), cu
     if current_user.email != "juan@test.com" and workspace_id not in [w.id for w in current_user.workspaces]:
         raise HTTPException(status_code=403, detail="Not authorized for this workspace")
         
-    return db.query(models.LegalRequirement).filter(models.LegalRequirement.workspace_id == workspace_id).order_by(models.LegalRequirement.id.asc()).all()
+    query = db.query(models.LegalRequirement).filter(models.LegalRequirement.workspace_id == workspace_id)
+    
+    if current_user.email != "juan@test.com":
+        try:
+            allowed = json.loads(current_user.allowed_jurisdictions or "[]")
+        except:
+            allowed = []
+        if not allowed:
+            return []
+        
+        query = query.filter(
+            or_(
+                models.LegalRequirement.jurisdiccion_nacional.in_(allowed),
+                models.LegalRequirement.jurisdiccion_local.in_(allowed)
+            )
+        )
+        
+    return query.order_by(models.LegalRequirement.id.asc()).all()
+
+@app.get("/api/jurisdictions")
+def get_jurisdictions(db: Session = Depends(get_db)):
+    nacionales = db.query(models.LegalRequirement.jurisdiccion_nacional).filter(models.LegalRequirement.jurisdiccion_nacional != "").distinct().all()
+    locales = db.query(models.LegalRequirement.jurisdiccion_local).filter(models.LegalRequirement.jurisdiccion_local != "").distinct().all()
+    
+    jurisdictions = set()
+    for n in nacionales:
+        if n[0]: jurisdictions.add(n[0].strip())
+    for l in locales:
+        if l[0]: jurisdictions.add(l[0].strip())
+        
+    return sorted(list(jurisdictions))
 
 @app.post("/api/requirements", response_model=schemas.LegalRequirementResponse)
 def create_requirement(req: schemas.LegalRequirementCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
