@@ -219,12 +219,33 @@ def get_requirements(workspace_id: int = None, db: Session = Depends(get_db), cu
         if not allowed:
             return []
         
-        query = query.filter(
-            or_(
-                models.LegalRequirement.jurisdiccion_nacional.in_(allowed),
-                models.LegalRequirement.jurisdiccion_local.in_(allowed)
+        nacional_filters = []
+        local_filters = []
+        for a in allowed:
+            if a.startswith("Nacional: "):
+                nacional_filters.append(a.replace("Nacional: ", ""))
+            elif a.startswith("Local: "):
+                local_filters.append(a.replace("Local: ", ""))
+            else:
+                # Fallback for existing assignments that don't have the prefix
+                nacional_filters.append(a)
+                local_filters.append(a)
+                
+        conditions = []
+        if nacional_filters:
+            conditions.append(
+                (models.LegalRequirement.jurisdiccion_nacional.in_(nacional_filters)) &
+                ((models.LegalRequirement.jurisdiccion_local == "") | (models.LegalRequirement.jurisdiccion_local.is_(None)))
             )
-        )
+        if local_filters:
+            conditions.append(
+                models.LegalRequirement.jurisdiccion_local.in_(local_filters)
+            )
+            
+        if conditions:
+            query = query.filter(or_(*conditions))
+        else:
+            return []
         
     return query.order_by(models.LegalRequirement.id.asc()).all()
 
@@ -235,9 +256,9 @@ def get_jurisdictions(db: Session = Depends(get_db)):
     
     jurisdictions = set()
     for n in nacionales:
-        if n[0]: jurisdictions.add(n[0].strip())
+        if n[0]: jurisdictions.add(f"Nacional: {n[0].strip()}")
     for l in locales:
-        if l[0]: jurisdictions.add(l[0].strip())
+        if l[0]: jurisdictions.add(f"Local: {l[0].strip()}")
         
     return sorted(list(jurisdictions))
 
