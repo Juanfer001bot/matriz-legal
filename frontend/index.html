@@ -9,12 +9,16 @@
 </head>
 <body>
     <div class="background-glow"></div>
-    <div class="container">
-        <header>
+    <header class="header">
+        <div class="header-content">
             <h1>Matriz Legal de Cumplimiento - Bertolo Narganes | Consultoría Ambiental y HSEQ</h1>
-            <p>Monitoreo inteligente de Ambiente, Seguridad, Higiene y Energía</p>
-            <button id="btnNewReq" class="btn-primary">Nueva Normativa</button>
-        </header>
+            <p style="color: var(--text-secondary); margin-top: 5px; font-size: 0.95rem;">Monitoreo inteligente de Ambiente, Seguridad, Higiene y Energía</p>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn" id="btnNewReq">Nueva Normativa</button>
+                <button class="btn" style="background: var(--bg-card); border: 1px solid var(--border-color);" onclick="localStorage.removeItem('token'); window.location.href='/login.html';">Cerrar Sesión</button>
+            </div>
+        </div>
+    </header>
 
         <section class="filters-section glass">
             <input type="text" id="searchBox" placeholder="Buscar por título, norma o ID...">

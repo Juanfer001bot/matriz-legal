@@ -1,13 +1,22 @@
 import os
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict, Any
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from zoneinfo import ZoneInfo
+import httpx
+from pydantic import BaseModel
 
 from . import models, schemas
-from .database import engine, init_db, get_db
+from .database import engine, init_db, get_db, SessionLocal
 from .scraper import scrape_boletin_oficial
+from .chatbot import get_chatbot_response
+from .notifications import send_telegram_alert, TELEGRAM_BOT_TOKEN, send_email_alert
+from .auth import verify_password, get_password_hash, create_access_token, get_current_user
 
 # Inicializar Base de Datos
 init_db()
@@ -22,13 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API Endpoints
-
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from zoneinfo import ZoneInfo
-from .database import SessionLocal
-
 scheduler = AsyncIOScheduler()
 
 async def scheduled_scraping():
@@ -42,32 +44,59 @@ async def scheduled_scraping():
         db.close()
 
 @app.on_event("startup")
-def start_scheduler():
+def on_startup():
+    init_db()
     tz = ZoneInfo('America/Argentina/Buenos_Aires')
     trigger = CronTrigger(hour=8, minute=0, timezone=tz)
     scheduler.add_job(scheduled_scraping, trigger)
     scheduler.start()
     print("[CRON] Reloj biológico interno iniciado (alarma a las 8:00 AM AR).")
 
+# Auth Endpoints
+@app.post("/api/register", response_model=schemas.UserResponse)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed_password = get_password_hash(user.password)
+    new_user = models.User(email=user.email, hashed_password=hashed_password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+
+@app.post("/api/login", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+# Protected CRUD Endpoints
 @app.get("/api/requirements", response_model=List[schemas.LegalRequirementResponse])
-def get_requirements(db: Session = Depends(get_db)):
-    return db.query(models.LegalRequirement).all()
+def get_requirements(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == current_user.id).all()
 
 @app.post("/api/requirements", response_model=schemas.LegalRequirementResponse)
-def create_requirement(req: schemas.LegalRequirementCreate, db: Session = Depends(get_db)):
-    db_req = models.LegalRequirement(**req.model_dump())
+def create_requirement(req: schemas.LegalRequirementCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_req = models.LegalRequirement(**req.dict(), user_id=current_user.id)
     db.add(db_req)
     db.commit()
     db.refresh(db_req)
     return db_req
 
 @app.put("/api/requirements/{req_id}", response_model=schemas.LegalRequirementResponse)
-def update_requirement(req_id: int, req: schemas.LegalRequirementUpdate, db: Session = Depends(get_db)):
-    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id).first()
+def update_requirement(req_id: int, req: schemas.LegalRequirementCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id, models.LegalRequirement.user_id == current_user.id).first()
     if not db_req:
-        raise HTTPException(status_code=404, detail="Requisito no encontrado")
+        raise HTTPException(status_code=404, detail="Requirement not found or not owned by user")
     
-    for key, value in req.model_dump().items():
+    for key, value in req.dict(exclude_unset=True).items():
         setattr(db_req, key, value)
         
     db.commit()
@@ -75,15 +104,16 @@ def update_requirement(req_id: int, req: schemas.LegalRequirementUpdate, db: Ses
     return db_req
 
 @app.delete("/api/requirements/{req_id}")
-def delete_requirement(req_id: int, db: Session = Depends(get_db)):
-    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id).first()
+def delete_requirement(req_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_req = db.query(models.LegalRequirement).filter(models.LegalRequirement.id == req_id, models.LegalRequirement.user_id == current_user.id).first()
     if not db_req:
-        raise HTTPException(status_code=404, detail="Requisito no encontrado")
+        raise HTTPException(status_code=404, detail="Requirement not found or not owned by user")
+    
     db.delete(db_req)
     db.commit()
-    return {"message": "Requisito eliminado exitosamente"}
+    return {"status": "deleted"}
 
-# Endpoint para Cron-job externo
+# Bot Endpoints
 @app.post("/api/bot/run-scraper")
 async def trigger_scraper(authorization: str = Header(None), db: Session = Depends(get_db)):
     cron_secret = os.getenv("CRON_SECRET", "mi_clave_secreta_123")
@@ -92,12 +122,6 @@ async def trigger_scraper(authorization: str = Header(None), db: Session = Depen
     
     await scrape_boletin_oficial(db)
     return {"status": "success", "message": "Scraping ejecutado"}
-
-import httpx
-from pydantic import BaseModel
-from typing import Any, Dict
-from .chatbot import get_chatbot_response
-from .notifications import send_telegram_alert, TELEGRAM_BOT_TOKEN
 
 class TelegramWebhook(BaseModel):
     update_id: int
@@ -109,13 +133,8 @@ async def telegram_webhook(update: TelegramWebhook, db: Session = Depends(get_db
         chat_id = str(update.message["chat"]["id"])
         texto_usuario = update.message["text"]
         
-        # Opcional: Podrías verificar si chat_id está en TELEGRAM_CHAT_IDS para seguridad
-        
-        # 1. Avisar que estamos pensando (opcional, pero da buen UX)
-        # 2. Consultar a Gemini
         respuesta_ia = await get_chatbot_response(texto_usuario, db)
         
-        # 3. Enviar respuesta usando httpx directamente a ese chat_id
         if TELEGRAM_BOT_TOKEN:
             url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             payload = {"chat_id": chat_id, "text": respuesta_ia}
@@ -126,7 +145,6 @@ async def telegram_webhook(update: TelegramWebhook, db: Session = Depends(get_db
 
 @app.get("/api/bot/set-webhook")
 async def set_telegram_webhook(url: str):
-    """Llama a este endpoint pasándole la URL de tu app en Render (ej: url=https://matriz-legal.onrender.com/api/bot/webhook)"""
     if not TELEGRAM_BOT_TOKEN:
         return {"error": "Falta TELEGRAM_BOT_TOKEN"}
     
@@ -136,26 +154,20 @@ async def set_telegram_webhook(url: str):
         return res.json()
 
 from backend.seed_excel import seed_from_excel
-from .notifications import send_email_alert
 
 # Endpoint temporal para cargar leyes en Render
 @app.get("/api/bot/cargar-leyes-oculto")
-def cargar_leyes():
+def cargar_leyes(email: str = "juan@test.com"):
     try:
-        count = seed_from_excel("Matriz Legal Integrada.xlsx")
-        return {"status": "success", "message": f"Leyes cargadas con éxito desde Excel. Total insertadas: {count}"}
+        count = seed_from_excel("Matriz Legal Integrada.xlsx", email=email)
+        return {"status": "success", "message": f"Leyes cargadas con éxito desde Excel. Total insertadas: {count} para el usuario {email}"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# Endpoint temporal para forzar un correo de prueba (y ver errores)
-@app.get("/api/bot/force-test-email")
-def force_test_email():
-    try:
-        send_email_alert("TEST - Matriz Legal", "Este es un correo de prueba forzado. Si lo ves, el correo funciona bien.")
-        return {"status": "success", "message": "Correo enviado sin errores desde el servidor."}
-    except Exception as e:
-        return {"status": "error", "message": f"Fallo al enviar correo: {str(e)}"}
+@app.post("/api/bot/alert-email")
+def alert_email(body: dict):
+    send_email_alert(body.get("subject", "Alerta Legal"), body.get("message", ""))
+    return {"status": "success"}
 
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-

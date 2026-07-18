@@ -1,3 +1,9 @@
+// Check auth
+const token = localStorage.getItem('token');
+if (!token) {
+    window.location.href = '/login.html';
+}
+
 const API_URL = '/api/requirements';
 let requirements = [];
 
@@ -64,9 +70,18 @@ reqForm.addEventListener('submit', async (e) => {
         
         const response = await fetch(url, {
             method: method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify(data)
         });
+
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+            return;
+        }
 
         if (response.ok) {
             modal.classList.remove('active');
@@ -81,7 +96,16 @@ reqForm.addEventListener('submit', async (e) => {
 
 async function fetchRequirements() {
     try {
-        const response = await fetch(API_URL);
+        const response = await fetch(API_URL, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+            return;
+        }
+
         requirements = await response.json();
         renderTable();
     } catch (error) {

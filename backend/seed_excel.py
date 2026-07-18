@@ -8,9 +8,10 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import engine, SessionLocal
-from backend.models import Base, LegalRequirement
+from backend.models import Base, LegalRequirement, User
+from backend.auth import get_password_hash
 
-def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx"):
+def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx", email="juan@test.com"):
     print("Iniciando reseteo de la base de datos...")
     
     # Drop and recreate tables
@@ -23,16 +24,22 @@ def seed_from_excel(excel_path="Matriz Legal Integrada.xlsx"):
 
     print("Leyendo Excel...")
     df = pd.read_excel(excel_path)
-    
-    # Reemplazar NaNs por strings vacíos
     df = df.fillna("")
 
     db: Session = SessionLocal()
     
+    # Crear usuario default si no existe
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        user = User(email=email, hashed_password=get_password_hash("password123"))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
     agregados = 0
     for _, row in df.iterrows():
-        # Ignoramos la columna 'id' del Excel para dejar que SQLAlchemy auto-incremente
         req = LegalRequirement(
+            user_id=user.id,
             tipo_norma=str(row.get('Tipo de norma', '')),
             numero=str(row.get('Numero', '')),
             anio_fecha=str(row.get('Año / Fecha de Publicación', '')),

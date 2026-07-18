@@ -10,3 +10,7 @@ google-genai
 apscheduler
 pandas
 openpyxl
+PyJWT
+passlib
+bcrypt
+python-multipart
