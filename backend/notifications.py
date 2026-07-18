@@ -8,12 +8,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_IDS = os.getenv("TELEGRAM_CHAT_IDS", "").split(",")
+TELEGRAM_CHAT_IDS = [x.strip() for x in os.getenv("TELEGRAM_CHAT_IDS", "").split(",") if x.strip()]
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-ALERT_EMAILS = os.getenv("ALERT_EMAILS", "").split(",")
+ALERT_EMAILS = [x.strip() for x in os.getenv("ALERT_EMAILS", "").split(",") if x.strip()]
 
 async def send_telegram_alert(message: str):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_IDS or not TELEGRAM_CHAT_IDS[0]:
@@ -39,8 +39,7 @@ async def send_telegram_alert(message: str):
 
 def send_email_alert(subject: str, message: str):
     if not SMTP_USERNAME or not SMTP_PASSWORD or not ALERT_EMAILS or not ALERT_EMAILS[0]:
-        print("Email config is missing, skipping alert.")
-        return
+        raise ValueError("Configuración de correo incompleta en las variables de entorno.")
 
     msg = MIMEMultipart()
     msg['From'] = SMTP_USERNAME
@@ -59,3 +58,4 @@ def send_email_alert(subject: str, message: str):
         print("Email alert sent successfully.")
     except Exception as e:
         print(f"Error sending Email alert: {e}")
+        raise e

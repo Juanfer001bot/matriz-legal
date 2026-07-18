@@ -42,30 +42,20 @@ reqForm.addEventListener('submit', async (e) => {
     
     // Recolectar datos
     const data = {
-        ambito: document.getElementById('ambito').value,
-        jurisdiccion: document.getElementById('jurisdiccion').value,
         tipo_norma: document.getElementById('tipo_norma').value,
-        numero_anio: document.getElementById('numero_anio').value,
-        titulo_tema: document.getElementById('titulo_tema').value,
+        numero: document.getElementById('numero').value,
+        anio_fecha: document.getElementById('anio_fecha').value,
+        jurisdiccion_nacional: document.getElementById('jurisdiccion_nacional').value,
+        jurisdiccion_local: document.getElementById('jurisdiccion_local').value,
+        tema: document.getElementById('tema').value,
+        titulo: document.getElementById('titulo').value,
+        breve_descripcion: document.getElementById('breve_descripcion').value,
         autoridad_aplicacion: document.getElementById('autoridad_aplicacion').value,
         estado_vigencia: document.getElementById('estado_vigencia').value,
-        
         articulos_aplicables: document.getElementById('articulos_aplicables').value,
-        obligacion_requisito: document.getElementById('obligacion_requisito').value,
-        justificacion_aplicabilidad: document.getElementById('justificacion_aplicabilidad').value,
-        frecuencia_cumplimiento: document.getElementById('frecuencia_cumplimiento').value,
-        vinculacion_tecnica: document.getElementById('vinculacion_tecnica').value,
-        
-        estado_cumplimiento: document.getElementById('estado_cumplimiento').value,
-        evidencia_objetiva: document.getElementById('evidencia_objetiva').value,
-        fecha_ultima_evaluacion: document.getElementById('fecha_ultima_evaluacion').value,
-        proxima_fecha_evaluacion: document.getElementById('proxima_fecha_evaluacion').value,
-        responsable_evaluacion: document.getElementById('responsable_evaluacion').value,
-        
-        accion_correctiva: document.getElementById('accion_correctiva').value,
-        numero_nc: document.getElementById('numero_nc').value,
-        responsable_accion: document.getElementById('responsable_accion').value,
-        fecha_limite: document.getElementById('fecha_limite').value
+        requisito_obligacion: document.getElementById('requisito_obligacion').value,
+        evidencia_cumplimiento: document.getElementById('evidencia_cumplimiento').value,
+        estado_cumplimiento: document.getElementById('estado_cumplimiento').value
     };
 
     try {
@@ -115,11 +105,12 @@ function renderTable() {
     const estadoF = filterEstado.value;
 
     const filtered = requirements.filter(req => {
-        const matchTerm = (req.titulo_tema || '').toLowerCase().includes(term) ||
+        const matchTerm = (req.titulo || '').toLowerCase().includes(term) ||
+                          (req.tema || '').toLowerCase().includes(term) ||
                           (req.tipo_norma || '').toLowerCase().includes(term) ||
-                          (req.numero_anio || '').toLowerCase().includes(term) ||
                           String(req.id).includes(term);
-        const matchAmbito = ambitoF ? req.ambito === ambitoF : true;
+        // Note: The filter dropdown might need updating later since 'ambito' doesn't exist, we can map to 'tema'
+        const matchAmbito = ambitoF ? (req.tema || '').includes(ambitoF) : true;
         const matchEstado = estadoF ? req.estado_cumplimiento === estadoF : true;
         return matchTerm && matchAmbito && matchEstado;
     });
@@ -130,13 +121,14 @@ function renderTable() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>#${req.id}</td>
-            <td>${req.tipo_norma} ${req.numero_anio}</td>
-            <td>${req.ambito}</td>
-            <td>${req.jurisdiccion}</td>
-            <td><div style="max-width:300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${req.titulo_tema}">${req.titulo_tema}</div></td>
+            <td>${req.jurisdiccion_nacional}</td>
+            <td>${req.jurisdiccion_local}</td>
+            <td>${req.tipo_norma} ${req.numero}</td>
+            <td>${req.tema}</td>
+            <td><div style="max-width:300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${req.titulo}">${req.titulo}</div></td>
             <td><span class="badge ${getBadgeClass(req.estado_cumplimiento)}">${req.estado_cumplimiento}</span></td>
             <td>
-                <button class="action-btn" onclick="editRequirement(${req.id})">Editar</button>
+                <button class="action-btn" onclick="editRequirement(${req.id})">Detalles</button>
             </td>
         `;
         tableBody.appendChild(tr);

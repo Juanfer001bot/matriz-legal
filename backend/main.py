@@ -34,7 +34,7 @@ scheduler = AsyncIOScheduler()
 async def scheduled_scraping():
     db = SessionLocal()
     try:
-        print("⏰ Ejecutando escaneo automático programado...")
+        print("[CRON] Ejecutando escaneo automático programado...")
         await scrape_boletin_oficial(db)
     except Exception as e:
         print(f"Error en el escaneo automático: {e}")
@@ -47,7 +47,7 @@ def start_scheduler():
     trigger = CronTrigger(hour=8, minute=0, timezone=tz)
     scheduler.add_job(scheduled_scraping, trigger)
     scheduler.start()
-    print("⏰ Reloj biológico interno iniciado (alarma a las 8:00 AM AR).")
+    print("[CRON] Reloj biológico interno iniciado (alarma a las 8:00 AM AR).")
 
 @app.get("/api/requirements", response_model=List[schemas.LegalRequirementResponse])
 def get_requirements(db: Session = Depends(get_db)):
@@ -135,17 +135,15 @@ async def set_telegram_webhook(url: str):
         res = await client.post(tg_url, json={"url": url})
         return res.json()
 
-from seed_db import seed
-from seed_351 import seed_351
+from backend.seed_excel import seed_from_excel
 from .notifications import send_email_alert
 
-# Endpoint temporal para cargar leyes
+# Endpoint temporal para cargar leyes en Render
 @app.get("/api/bot/cargar-leyes-oculto")
 def cargar_leyes():
     try:
-        seed()
-        seed_351()
-        return {"status": "success", "message": "Leyes cargadas con éxito"}
+        seed_from_excel("Matriz Legal Integrada.xlsx")
+        return {"status": "success", "message": "Leyes cargadas con éxito desde Excel"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

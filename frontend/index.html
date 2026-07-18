@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matriz Legal - Dashboard</title>
+    <title>Matriz Legal de Cumplimiento - Bertolo Narganes | Consultoría Ambiental y HSEQ</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 </head>
@@ -11,8 +11,8 @@
     <div class="background-glow"></div>
     <div class="container">
         <header>
-            <h1>Matriz Legal de Cumplimiento - Bertolo Narganes | Consultoría Ambiental y HSEQ </h1>
-            <p>Monitoreo inteligente de Ambiente, Seguridad, Higiene y Energía </p>
+            <h1>Matriz Legal de Cumplimiento - Bertolo Narganes | Consultoría Ambiental y HSEQ</h1>
+            <p>Monitoreo inteligente de Ambiente, Seguridad, Higiene y Energía</p>
             <button id="btnNewReq" class="btn-primary">Nueva Normativa</button>
         </header>
 
@@ -40,11 +40,12 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Norma</th>
-                        <th>Ámbito</th>
-                        <th>Jurisdicción</th>
+                        <th>Nacional</th>
+                        <th>Local</th>
+                        <th>Tipo Norma</th>
+                        <th>Tema</th>
                         <th>Título</th>
-                        <th>Estado Cumplimiento</th>
+                        <th>Cumplimiento</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -57,131 +58,83 @@
 
     <!-- Modal Form -->
     <div id="modalForm" class="modal">
-        <div class="modal-content glass">
+        <div class="modal-content glass" style="max-width: 900px;">
             <span class="close-btn">&times;</span>
-            <h2 id="modalTitle">Gestionar Normativa</h2>
+            <h2 id="modalTitle">Detalle de Normativa</h2>
             <form id="reqForm">
                 <input type="hidden" id="reqId">
                 
                 <div class="form-section">
-                    <h3>1. Identificación del Requisito</h3>
+                    <h3>Identificación Básica</h3>
                     <div class="grid-2">
-                        <div>
-                            <label>Ámbito</label>
-                            <select id="ambito" required>
-                                <option value="Medio Ambiente">Medio Ambiente</option>
-                                <option value="SST">SST</option>
-                                <option value="Energía">Energía</option>
-                                <option value="Transversal">Transversal</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Jurisdicción</label>
-                            <input type="text" id="jurisdiccion" value="Nacional">
-                        </div>
                         <div>
                             <label>Tipo de Norma</label>
                             <input type="text" id="tipo_norma" required>
                         </div>
                         <div>
-                            <label>Número y Año</label>
-                            <input type="text" id="numero_anio">
-                        </div>
-                        <div class="full-width">
-                            <label>Título / Tema</label>
-                            <textarea id="titulo_tema" rows="2" required></textarea>
+                            <label>Número</label>
+                            <input type="text" id="numero">
                         </div>
                         <div>
-                            <label>Autoridad Aplicación</label>
+                            <label>Año / Fecha de Publicación</label>
+                            <input type="text" id="anio_fecha">
+                        </div>
+                        <div>
+                            <label>Jurisdicción Nacional</label>
+                            <input type="text" id="jurisdiccion_nacional">
+                        </div>
+                        <div>
+                            <label>Jurisdicción Local/Provincial</label>
+                            <input type="text" id="jurisdiccion_local">
+                        </div>
+                        <div>
+                            <label>Tema</label>
+                            <input type="text" id="tema">
+                        </div>
+                        <div class="full-width">
+                            <label>Título</label>
+                            <textarea id="titulo" rows="2" required></textarea>
+                        </div>
+                        <div class="full-width">
+                            <label>Breve Descripción</label>
+                            <textarea id="breve_descripcion" rows="3"></textarea>
+                        </div>
+                        <div>
+                            <label>Autoridad de Aplicación</label>
                             <input type="text" id="autoridad_aplicacion">
                         </div>
                         <div>
-                            <label>Estado Vigencia</label>
-                            <select id="estado_vigencia">
-                                <option value="Vigente">Vigente</option>
-                                <option value="Modificada">Modificada</option>
-                                <option value="Derogada">Derogada</option>
-                            </select>
+                            <label>Estado de Vigencia</label>
+                            <input type="text" id="estado_vigencia">
                         </div>
                     </div>
                 </div>
 
                 <div class="form-section">
-                    <h3>2. Análisis de Aplicabilidad</h3>
+                    <h3>Auditoría y Cumplimiento</h3>
                     <div class="grid-2">
                         <div class="full-width">
-                            <label>Artículos Aplicables</label>
-                            <input type="text" id="articulos_aplicables">
+                            <label>Artículo(s) Aplicable(s)</label>
+                            <textarea id="articulos_aplicables" rows="2"></textarea>
                         </div>
                         <div class="full-width">
-                            <label>Obligación / Requisito</label>
-                            <textarea id="obligacion_requisito" rows="2"></textarea>
+                            <label>Requisito / Obligación Específica</label>
+                            <textarea id="requisito_obligacion" rows="3"></textarea>
                         </div>
                         <div class="full-width">
-                            <label>Justificación de Aplicabilidad</label>
-                            <textarea id="justificacion_aplicabilidad" rows="2"></textarea>
+                            <label>Evidencia de Cumplimiento</label>
+                            <textarea id="evidencia_cumplimiento" rows="3"></textarea>
                         </div>
-                        <div>
-                            <label>Frecuencia Cumplimiento</label>
-                            <input type="text" id="frecuencia_cumplimiento">
-                        </div>
-                        <div>
-                            <label>Vinculación Técnica</label>
-                            <input type="text" id="vinculacion_tecnica">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3>3. Evaluación de Cumplimiento</h3>
-                    <div class="grid-2">
                         <div>
                             <label>Estado de Cumplimiento</label>
                             <select id="estado_cumplimiento">
                                 <option value="Cumple">Cumple</option>
                                 <option value="No Cumple">No Cumple</option>
-                                <option value="En Proceso">En Proceso de Adecuación</option>
-                                <option value="No Evaluado">No Evaluado</option>
+                                <option value="Parcial / En Proceso">Parcial / En Proceso</option>
+                                <option value="No Aplica">No Aplica</option>
                                 <option value="A Revisar">A Revisar</option>
+                                <option value="No Evaluado">No Evaluado</option>
                             </select>
-                        </div>
-                        <div class="full-width">
-                            <label>Evidencia Objetiva</label>
-                            <input type="text" id="evidencia_objetiva">
-                        </div>
-                        <div>
-                            <label>Última Evaluación (Fecha)</label>
-                            <input type="date" id="fecha_ultima_evaluacion">
-                        </div>
-                        <div>
-                            <label>Próxima Evaluación</label>
-                            <input type="date" id="proxima_fecha_evaluacion">
-                        </div>
-                        <div class="full-width">
-                            <label>Responsable</label>
-                            <input type="text" id="responsable_evaluacion">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h3>4. Gestión de Desvíos</h3>
-                    <div class="grid-2">
-                        <div class="full-width">
-                            <label>Acción Correctiva</label>
-                            <textarea id="accion_correctiva" rows="2"></textarea>
-                        </div>
-                        <div>
-                            <label>Número NC</label>
-                            <input type="text" id="numero_nc">
-                        </div>
-                        <div>
-                            <label>Responsable Acción</label>
-                            <input type="text" id="responsable_accion">
-                        </div>
-                        <div>
-                            <label>Fecha Límite</label>
-                            <input type="date" id="fecha_limite">
                         </div>
                     </div>
                 </div>

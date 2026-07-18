@@ -27,7 +27,7 @@ async def scrape_nacion(client, db: Session):
                 
                 if any(kw in texto_completo.lower() for kw in KEYWORDS):
                     titulo = texto_completo
-                    existe = db.query(LegalRequirement).filter(LegalRequirement.titulo_tema == titulo).first()
+                    existe = db.query(LegalRequirement).filter(LegalRequirement.titulo == titulo).first()
                     if not existe:
                         import re
                         patron = r"(Ley|Decreto|Resolución|Disposición|Decisión Administrativa|Aviso)\s*(?:N°|Nro\.)?\s*([\d\.]+/?\d*)"
@@ -39,11 +39,18 @@ async def scrape_nacion(client, db: Session):
                             tipo_norma = textos[1].split()[0] if len(textos)>1 and " " in textos[1] else "Normativa"
                             numero_anio = ""
                             
+                        today_str = datetime.now().strftime('%d/%m/%Y')
                         req = LegalRequirement(
-                            ambito="Transversal", jurisdiccion="Nacional",
-                            tipo_norma=tipo_norma, numero_anio=numero_anio, titulo_tema=titulo,
+                            tipo_norma=tipo_norma,
+                            numero=numero_anio,
+                            anio_fecha=today_str,
+                            jurisdiccion_nacional="Argentina",
+                            jurisdiccion_local="Nacional",
+                            tema="Novedad Scraper",
+                            titulo=titulo,
                             autoridad_aplicacion=textos[0] if textos else "Nacional",
-                            estado_cumplimiento="A Revisar", estado_vigencia="Vigente"
+                            estado_cumplimiento="A Revisar",
+                            estado_vigencia="Vigente"
                         )
                         db.add(req)
                         nuevas.append(req)
@@ -69,13 +76,18 @@ async def scrape_caba(client, db: Session):
                     textos_brutos.append(texto_completo)
                     if any(kw in texto_completo.lower() for kw in KEYWORDS):
                         titulo = texto_completo
-                        existe = db.query(LegalRequirement).filter(LegalRequirement.titulo_tema == titulo).first()
+                        existe = db.query(LegalRequirement).filter(LegalRequirement.titulo == titulo).first()
                         if not existe:
                             req = LegalRequirement(
-                                ambito="Transversal", jurisdiccion="CABA",
-                                tipo_norma=norma.get('tipo_norma_desc', 'Normativa'), titulo_tema=titulo,
+                                tipo_norma=norma.get('tipo_norma_desc', 'Normativa'),
+                                anio_fecha=today_caba,
+                                jurisdiccion_nacional="Argentina",
+                                jurisdiccion_local="CABA",
+                                tema="Novedad Scraper",
+                                titulo=titulo,
                                 autoridad_aplicacion=norma.get('reparticion', 'CABA'),
-                                estado_cumplimiento="A Revisar", estado_vigencia="Vigente"
+                                estado_cumplimiento="A Revisar",
+                                estado_vigencia="Vigente"
                             )
                             db.add(req)
                             nuevas.append(req)
@@ -100,13 +112,18 @@ async def scrape_pba(client, db: Session):
                 for res in resultados:
                     texto = res.get_text(strip=True)
                     textos_brutos.append(texto)
-                    existe = db.query(LegalRequirement).filter(LegalRequirement.titulo_tema == texto).first()
+                    existe = db.query(LegalRequirement).filter(LegalRequirement.titulo == texto).first()
                     if not existe and texto:
                         req = LegalRequirement(
-                            ambito="Transversal", jurisdiccion="PBA",
-                            tipo_norma="Normativa", titulo_tema=texto,
+                            tipo_norma="Normativa",
+                            anio_fecha=today_pba,
+                            jurisdiccion_nacional="Argentina",
+                            jurisdiccion_local="PBA",
+                            tema="Novedad Scraper",
+                            titulo=texto,
                             autoridad_aplicacion="Provincia de Buenos Aires",
-                            estado_cumplimiento="A Revisar", estado_vigencia="Vigente"
+                            estado_cumplimiento="A Revisar",
+                            estado_vigencia="Vigente"
                         )
                         db.add(req)
                         nuevas.append(req)
@@ -159,13 +176,19 @@ async def scrape_pdf_jurisdiccion(client, db: Session, url: str, jurisdiccion: s
                             
                             titulo_con_fecha = f"{titulo} ({today_str})"
                             
-                            existe = db.query(LegalRequirement).filter(LegalRequirement.jurisdiccion == jurisdiccion, LegalRequirement.titulo_tema == titulo_con_fecha).first()
+                            existe = db.query(LegalRequirement).filter(LegalRequirement.jurisdiccion_local == jurisdiccion, LegalRequirement.titulo == titulo_con_fecha).first()
                             if not existe:
+                                nacion_str = "Paraguay" if jurisdiccion == "Paraguay" else "Argentina"
                                 req = LegalRequirement(
-                                    ambito="Transversal", jurisdiccion=jurisdiccion,
-                                    tipo_norma=tipo, titulo_tema=titulo_con_fecha,
+                                    tipo_norma=tipo,
+                                    anio_fecha=today_str,
+                                    jurisdiccion_nacional=nacion_str,
+                                    jurisdiccion_local=jurisdiccion,
+                                    tema="Novedad Scraper",
+                                    titulo=titulo_con_fecha,
                                     autoridad_aplicacion=jurisdiccion,
-                                    estado_cumplimiento="A Revisar", estado_vigencia="Vigente"
+                                    estado_cumplimiento="A Revisar",
+                                    estado_vigencia="Vigente"
                                 )
                                 db.add(req)
                                 nuevas.append(req)
