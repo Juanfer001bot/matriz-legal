@@ -45,12 +45,30 @@
                         <th>ID</th>
                         <th>Email</th>
                         <th>Estado</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="usersBody">
                     <!-- Users will be injected here -->
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal" id="modalEditUser">
+        <div class="modal-content glass" style="max-width: 400px;">
+            <span class="close-btn" id="closeEditModal">&times;</span>
+            <h2 style="margin-top:0">Modificar Contraseña</h2>
+            <form id="editUserForm" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="text" id="editPassword" required placeholder="Escribe la nueva contraseña">
+                </div>
+                <button type="submit" class="btn">Guardar Cambios</button>
+                <p id="editMsg" style="margin-top: 10px; font-weight: 500;"></p>
+            </form>
         </div>
     </div>
 

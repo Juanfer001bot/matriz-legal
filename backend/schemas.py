@@ -9,6 +9,9 @@ class UserCreate(BaseModel):
     email: str
     password: str
 
+class UserUpdate(BaseModel):
+    password: Optional[str] = None
+
 class UserResponse(BaseModel):
     id: int
     email: str

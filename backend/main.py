@@ -63,11 +63,62 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Clonar las normativas del usuario administrador (id = 1)
+    admin_reqs = db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == 1).all()
+    if admin_reqs:
+        for r in admin_reqs:
+            req_clone = models.LegalRequirement(
+                user_id=new_user.id,
+                tipo_norma=r.tipo_norma,
+                numero=r.numero,
+                anio_fecha=r.anio_fecha,
+                jurisdiccion_nacional=r.jurisdiccion_nacional,
+                jurisdiccion_local=r.jurisdiccion_local,
+                tema=r.tema,
+                titulo=r.titulo,
+                breve_descripcion=r.breve_descripcion,
+                autoridad_aplicacion=r.autoridad_aplicacion,
+                estado_vigencia=r.estado_vigencia,
+                articulos_aplicables=r.articulos_aplicables,
+                requisito_obligacion=r.requisito_obligacion,
+                evidencia_cumplimiento=r.evidencia_cumplimiento,
+                estado_cumplimiento=r.estado_cumplimiento
+            )
+            db.add(req_clone)
+        db.commit()
+
     return new_user
 
 @app.get("/api/users", response_model=List[schemas.UserResponse])
 def get_users(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     return db.query(models.User).all()
+
+@app.put("/api/users/{user_id}", response_model=schemas.UserResponse)
+def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    if user_update.password:
+        db_user.hashed_password = get_password_hash(user_update.password)
+        db.commit()
+        db.refresh(db_user)
+    return db_user
+
+@app.delete("/api/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    if db_user.id == 1:
+        raise HTTPException(status_code=400, detail="No se puede eliminar el administrador")
+        
+    db.query(models.LegalRequirement).filter(models.LegalRequirement.user_id == user_id).delete()
+    db.delete(db_user)
+    db.commit()
+    return {"status": "deleted"}
 
 @app.post("/api/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
