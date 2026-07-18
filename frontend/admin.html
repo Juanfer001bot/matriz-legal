@@ -63,6 +63,10 @@
                         <!-- Checkboxes injected here -->
                     </div>
                 </div>
+                <div class="form-group">
+                    <label>Jurisdicciones (Ctrl+Click)</label>
+                    <select id="newJurisdictions" multiple style="height: 80px;"></select>
+                </div>
                 <button type="submit" class="btn">Crear Usuario</button>
                 <p id="msg" style="margin-top: 10px; font-weight: 500;"></p>
             </form>
@@ -76,6 +80,7 @@
                         <th>ID</th>
                         <th>Email</th>
                         <th>Equipos</th>
+                        <th>Jurisdicciones</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
@@ -103,6 +108,10 @@
                     <div id="editWorkspacesContainer" style="display: flex; flex-direction: column; gap: 5px; max-height: 150px; overflow-y: auto; background: rgba(15,23,42,0.6); padding: 10px; border-radius: 8px;">
                         <!-- Checkboxes injected here -->
                     </div>
+                </div>
+                <div class="form-group">
+                    <label>Jurisdicciones (Ctrl+Click)</label>
+                    <select id="editJurisdictions" multiple style="height: 80px;"></select>
                 </div>
                 <button type="submit" class="btn">Guardar Cambios</button>
                 <p id="editMsg" style="margin-top: 10px; font-weight: 500;"></p>
