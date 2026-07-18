@@ -65,6 +65,10 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return new_user
 
+@app.get("/api/users", response_model=List[schemas.UserResponse])
+def get_users(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return db.query(models.User).all()
+
 @app.post("/api/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == form_data.username).first()
