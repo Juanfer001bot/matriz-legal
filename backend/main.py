@@ -105,7 +105,7 @@ def get_users(db: Session = Depends(get_db), current_user: models.User = Depends
 
 @app.put("/api/users/{user_id}", response_model=schemas.UserResponse)
 def update_user(user_id: int, user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    if current_user.email != "juan@test.com":
+    if current_user.email != "juan@test.com" and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
     db_user = db.query(models.User).filter(models.User.id == user_id).first()
     if not db_user:

@@ -18,6 +18,12 @@ const closeBtn = document.querySelector('.close-btn');
 const btnNewReq = document.getElementById('btnNewReq');
 const reqForm = document.getElementById('reqForm');
 const btnAdmin = document.getElementById('btnAdmin');
+const btnChangePassword = document.getElementById('btnChangePassword');
+const modalPassword = document.getElementById('modalPassword');
+const closePasswordModal = document.getElementById('closePasswordModal');
+const passwordForm = document.getElementById('passwordForm');
+const passwordMsg = document.getElementById('passwordMsg');
+let currentUserId = null;
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,6 +38,7 @@ async function fetchMe() {
         });
         if (res.ok) {
             const user = await res.json();
+            currentUserId = user.id;
             if (user.email === 'juan@test.com' && btnAdmin) {
                 btnAdmin.style.display = 'inline-block';
             }
@@ -40,6 +47,50 @@ async function fetchMe() {
         console.error('Error fetching user info', e);
     }
 }
+
+btnChangePassword.addEventListener('click', () => {
+    document.getElementById('newPassword').value = '';
+    passwordMsg.textContent = '';
+    modalPassword.classList.add('active');
+});
+
+closePasswordModal.addEventListener('click', () => {
+    modalPassword.classList.remove('active');
+});
+
+passwordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById('newPassword').value;
+    passwordMsg.style.color = '';
+    passwordMsg.textContent = 'Actualizando...';
+
+    if (!currentUserId) {
+        passwordMsg.textContent = 'Error: no se pudo identificar al usuario';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/users/${currentUserId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ password: newPassword })
+        });
+        if (response.ok) {
+            modalPassword.classList.remove('active');
+            alert('Contraseña actualizada con éxito');
+        } else {
+            passwordMsg.style.color = '#ff4d4d';
+            passwordMsg.textContent = 'Error al actualizar';
+        }
+    } catch (err) {
+        passwordMsg.style.color = '#ff4d4d';
+        passwordMsg.textContent = 'Error de red';
+    }
+});
+
 searchBox.addEventListener('input', renderTable);
 filterAmbito.addEventListener('change', renderTable);
 filterEstado.addEventListener('change', renderTable);
