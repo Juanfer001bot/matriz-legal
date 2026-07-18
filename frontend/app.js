@@ -209,9 +209,34 @@ async function fetchRequirements() {
         }
 
         requirements = await response.json();
+        populateTemas();
         renderTable();
     } catch (error) {
         console.error('Error fetching data', error);
+    }
+}
+
+function populateTemas() {
+    const currentValue = filterAmbito.value;
+    const temas = new Set();
+    
+    requirements.forEach(req => {
+        if (req.tema) {
+            temas.add(req.tema.trim());
+        }
+    });
+    
+    filterAmbito.innerHTML = '<option value="">Todos los Ámbitos (Temas)</option>';
+    
+    Array.from(temas).sort().forEach(tema => {
+        const opt = document.createElement('option');
+        opt.value = tema;
+        opt.textContent = tema;
+        filterAmbito.appendChild(opt);
+    });
+    
+    if (temas.has(currentValue)) {
+        filterAmbito.value = currentValue;
     }
 }
 
@@ -235,8 +260,7 @@ function renderTable() {
                           (req.tema || '').toLowerCase().includes(term) ||
                           (req.tipo_norma || '').toLowerCase().includes(term) ||
                           String(req.id).includes(term);
-        // Note: The filter dropdown might need updating later since 'ambito' doesn't exist, we can map to 'tema'
-        const matchAmbito = ambitoF ? (req.tema || '').includes(ambitoF) : true;
+        const matchAmbito = ambitoF ? (req.tema || '').trim() === ambitoF : true;
         const matchEstado = estadoF ? req.estado_cumplimiento === estadoF : true;
         return matchTerm && matchAmbito && matchEstado;
     });
