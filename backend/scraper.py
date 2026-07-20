@@ -45,7 +45,8 @@ async def scrape_nacion(client, db: Session):
                             jurisdiccion_local="Nacional",
                             tipo_norma=tipo_norma,
                             titulo=titulo,
-                            autoridad_aplicacion=textos[0] if textos else "Nacional"
+                            autoridad_aplicacion=textos[0] if textos else "Nacional",
+                            link_web=f"https://www.google.com/search?q=site:infoleg.gob.ar+{tipo_norma.replace(' ', '+')}+{titulo.split('-')[0].replace(' ', '+')}"
                         )
                         db.add(req)
                         nuevas.append(req)
@@ -93,7 +94,8 @@ async def scrape_caba(client, db: Session):
                                 jurisdiccion_local="CABA",
                                 tipo_norma=norma.get('tipo_norma_desc', 'Normativa'),
                                 titulo=titulo,
-                                autoridad_aplicacion="CABA"
+                                autoridad_aplicacion="CABA",
+                                link_web=f"https://boletinoficial.buenosaires.gob.ar/normativaba/{norma.get('idNorma', '')}" if norma.get('idNorma') else ""
                             )
                             db.add(req)
                             nuevas.append(req)
@@ -120,6 +122,9 @@ async def scrape_pba(client, db: Session):
                     texto = excerpt_tag.get_text(strip=True) if excerpt_tag else res.get_text(strip=True)
                     textos_brutos.append(texto)
                     
+                    
+                    link_web = "https://boletinoficial.gba.gob.ar" + res.find("a")["href"] if res.find("a") else url
+
                     existe = db.query(ScraperInbox).filter(ScraperInbox.titulo == texto).first()
                     if not existe and texto:
                         req = ScraperInbox(
@@ -128,7 +133,8 @@ async def scrape_pba(client, db: Session):
                             jurisdiccion_local="PBA",
                             tipo_norma="Normativa",
                             titulo=texto,
-                            autoridad_aplicacion="Provincia de Buenos Aires"
+                            autoridad_aplicacion="Provincia de Buenos Aires",
+                            link_web=link_web
                         )
                         db.add(req)
                         nuevas.append(req)
@@ -194,7 +200,8 @@ async def scrape_pdf_jurisdiccion(client, db: Session, url: str, jurisdiccion: s
                                     jurisdiccion_local=jurisdiccion,
                                     tipo_norma=tipo,
                                     titulo=titulo_con_fecha,
-                                    autoridad_aplicacion=jurisdiccion
+                                    autoridad_aplicacion=jurisdiccion,
+                                    link_web=pdf_link
                                 )
                                 db.add(req)
                                 nuevas.append(req)
@@ -231,13 +238,15 @@ async def scrape_corrientes(client, db: Session):
                 if any(kw in texto_completo.lower() for kw in KEYWORDS):
                     existe = db.query(ScraperInbox).filter(ScraperInbox.titulo == title).first()
                     if not existe and title:
+                        link_web = item.link.text if item.link else url
                         req = ScraperInbox(
                             fecha=datetime.now().strftime('%d/%m/%Y'),
                             jurisdiccion_nacional="Argentina",
                             jurisdiccion_local="Corrientes",
                             tipo_norma="Normativa",
                             titulo=title,
-                            autoridad_aplicacion="Corrientes"
+                            autoridad_aplicacion="Corrientes",
+                            link_web=link_web
                         )
                         db.add(req)
                         nuevas.append(req)
