@@ -84,3 +84,12 @@ class ActionPlan(Base):
     workspace = relationship("Workspace")
     requirement = relationship("LegalRequirement")
 
+class WorkspaceIntegration(Base):
+    __tablename__ = "workspace_integrations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"), unique=True)
+    kobo_webhook_secret = Column(String, default="")
+
+    workspace = relationship("Workspace")
+

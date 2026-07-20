@@ -530,5 +530,80 @@ def normalize_temas(db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": f"Se normalizaron {count} temas correctamente."}
 
+# Kobo Integration
+import uuid
+
+@app.get("/api/integrations/kobo")
+def get_kobo_integration(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com" and workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    integ = db.query(models.WorkspaceIntegration).filter(models.WorkspaceIntegration.workspace_id == workspace_id).first()
+    if not integ:
+        integ = models.WorkspaceIntegration(workspace_id=workspace_id, kobo_webhook_secret=str(uuid.uuid4()))
+        db.add(integ)
+        db.commit()
+        db.refresh(integ)
+        
+    return {"webhook_secret": integ.kobo_webhook_secret, "workspace_id": workspace_id}
+
+@app.post("/api/kobo/webhook/{workspace_id}/{secret}")
+async def kobo_webhook(workspace_id: int, secret: str, request: Request, db: Session = Depends(get_db)):
+    integ = db.query(models.WorkspaceIntegration).filter(
+        models.WorkspaceIntegration.workspace_id == workspace_id,
+        models.WorkspaceIntegration.kobo_webhook_secret == secret
+    ).first()
+    
+    if not integ:
+        raise HTTPException(status_code=403, detail="Invalid webhook URL")
+        
+    payload = await request.json()
+    
+    # Kobo sends a single JSON object with answers
+    # We will look for keys that end with '_ok' == 'no' or if they explicitly mention problems
+    
+    problems_found = False
+    action_plans = []
+    
+    inspector = payload.get("inspector", "Inspector de Kobo")
+    sector = payload.get("sector", "Sector desconocido")
+    kobo_id = payload.get("_id", "UNKNOWN")
+    
+    for key, value in payload.items():
+        if key.endswith("_ok") and str(value).lower() == "no":
+            problems_found = True
+            # Try to find the corresponding observation field (usually key without _ok + _obs)
+            base_key = key.replace("_ok", "")
+            obs = payload.get(f"{base_key}_obs", f"Desvío detectado en {base_key.replace('_', ' ')}")
+            
+            # Create Action Plan
+            plan = models.ActionPlan(
+                workspace_id=workspace_id,
+                nc_id=f"K-{kobo_id}-{base_key.upper()}",
+                origen_nc=f"Inspección (Kobo) - {sector}",
+                responsable=inspector,
+                fecha_compromiso="",
+                accion_implementar=obs,
+                estado_avance="Pendiente",
+                fecha_cierre=""
+            )
+            db.add(plan)
+            action_plans.append(plan)
+            
+    if problems_found:
+        db.commit()
+        return {"status": "success", "message": f"Created {len(action_plans)} action plans from failed inspection."}
+        
+    return {"status": "success", "message": "Inspection passed. No action plans created."}
+
+@app.get("/api/bot/migrate-kobo")
+def migrate_kobo(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        models.WorkspaceIntegration.__table__.create(engine)
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

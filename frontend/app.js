@@ -70,6 +70,8 @@ async function fetchMe() {
             currentUserId = user.id;
             if (user.email === 'juan@test.com') {
                 if (btnAdmin) btnAdmin.style.display = 'inline-block';
+                const btnInt = document.getElementById('btnIntegrations');
+                if (btnInt) btnInt.style.display = 'inline-block';
                 const btnInbox = document.getElementById('btnInbox');
                 if (btnInbox) btnInbox.style.display = 'inline-block';
             }
@@ -639,4 +641,42 @@ function populateActionPlanRequirements(selectedValue = "") {
     if (selectedValue) {
         select.value = selectedValue;
     }
+}
+
+
+// --- LOGICA DE INTEGRACIONES ---
+const btnIntegrations = document.getElementById('btnIntegrations');
+const modalIntegrations = document.getElementById('modalIntegrations');
+const closeIntegrationsModal = document.getElementById('closeIntegrationsModal');
+const koboWebhookUrl = document.getElementById('koboWebhookUrl');
+
+if (btnIntegrations) {
+    btnIntegrations.addEventListener('click', async () => {
+        if (!currentWorkspaceId) {
+            alert('Selecciona un equipo activo primero');
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/integrations/kobo?workspace_id=${currentWorkspaceId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const currentUrl = window.location.origin;
+                koboWebhookUrl.value = `${currentUrl}/api/kobo/webhook/${data.workspace_id}/${data.webhook_secret}`;
+                modalIntegrations.classList.add('active');
+            } else {
+                alert('No autorizado');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    });
+}
+
+if (closeIntegrationsModal) {
+    closeIntegrationsModal.addEventListener('click', () => {
+        modalIntegrations.classList.remove('active');
+    });
 }

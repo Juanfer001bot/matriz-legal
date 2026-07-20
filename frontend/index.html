@@ -34,6 +34,7 @@
                 <button class="btn-secondary" id="btnInbox" style="display: none; background-color: var(--accent);">Bandeja de Novedades</button>
                 <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
                 <button class="btn-secondary" id="btnAdmin" style="display: none;" onclick="window.location.href='/admin.html';">Usuarios</button>
+                <button class="btn-secondary" id="btnIntegrations" style="display: none;">Integraciones</button>
                 <button class="btn-secondary" id="btnThemeToggle">☀️ Claro</button>
                 <button class="btn-secondary" onclick="localStorage.removeItem('token'); window.location.href='/login.html';">Cerrar Sesión</button>
             </div>
@@ -306,6 +307,21 @@
                 <tbody id="inboxTableBody">
                 </tbody>
             </table>
+        </div>
+    <!-- Modal Integraciones -->
+    <div class="modal" id="modalIntegrations">
+        <div class="modal-content glass" style="max-width: 600px;">
+            <span class="close-btn" id="closeIntegrationsModal">&times;</span>
+            <h2 style="margin-top:0">Configuración de Integraciones</h2>
+            
+            <div class="form-section" style="margin-top: 15px;">
+                <h3>KoboToolbox (Módulo de Inspecciones)</h3>
+                <p style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-secondary);">Copia esta URL secreta y pégala en KoboToolbox (Configuración > REST Services > Endpoint URL) para recibir las inspecciones y generar Planes de Acción automáticamente.</p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="koboWebhookUrl" readonly style="flex: 1; background: var(--bg-color); color: var(--text-color); font-family: monospace;">
+                    <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('koboWebhookUrl').value); alert('Copiado!')">Copiar</button>
+                </div>
+            </div>
         </div>
     </div>
 
