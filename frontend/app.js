@@ -68,8 +68,10 @@ async function fetchMe() {
         if (res.ok) {
             const user = await res.json();
             currentUserId = user.id;
-            if (user.email === 'juan@test.com' && btnAdmin) {
-                btnAdmin.style.display = 'inline-block';
+            if (user.email === 'juan@test.com') {
+                if (btnAdmin) btnAdmin.style.display = 'inline-block';
+                const btnInbox = document.getElementById('btnInbox');
+                if (btnInbox) btnInbox.style.display = 'inline-block';
             }
             
             if (user.workspaces && user.workspaces.length > 0) {
@@ -181,6 +183,11 @@ reqForm.addEventListener('submit', async (e) => {
         evidencia_cumplimiento: document.getElementById('evidencia_cumplimiento').value,
         estado_cumplimiento: document.getElementById('estado_cumplimiento').value
     };
+    
+    const inbox_id_input = document.getElementById('inbox_id');
+    if (inbox_id_input && inbox_id_input.value) {
+        data.inbox_id = parseInt(inbox_id_input.value);
+    }
     
     if (!id && currentWorkspaceId) {
         data.workspace_id = parseInt(currentWorkspaceId);
@@ -317,6 +324,110 @@ function editRequirement(id) {
         const el = document.getElementById(key);
         if (el) el.value = req[key] || '';
     });
+    
+    modal.classList.add('active');
+}
+
+// --- LOGICA DE BANDEJA DE NOVEDADES (INBOX) ---
+const btnInbox = document.getElementById('btnInbox');
+const modalInbox = document.getElementById('modalInbox');
+const closeInboxModal = document.getElementById('closeInboxModal');
+const inboxTableBody = document.getElementById('inboxTableBody');
+
+if (btnInbox) {
+    btnInbox.addEventListener('click', () => {
+        fetchInbox();
+        modalInbox.classList.add('active');
+    });
+}
+
+if (closeInboxModal) {
+    closeInboxModal.addEventListener('click', () => {
+        modalInbox.classList.remove('active');
+    });
+}
+
+async function fetchInbox() {
+    try {
+        const res = await fetch('/api/inbox', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const items = await res.json();
+            renderInboxTable(items);
+        }
+    } catch (e) {
+        console.error('Error fetching inbox', e);
+    }
+}
+
+function renderInboxTable(items) {
+    if (!inboxTableBody) return;
+    inboxTableBody.innerHTML = '';
+    if (items.length === 0) {
+        inboxTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay novedades pendientes.</td></tr>';
+        return;
+    }
+    
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.fecha}</td>
+            <td>${item.jurisdiccion_nacional}</td>
+            <td>${item.jurisdiccion_local}</td>
+            <td>${item.tipo_norma}</td>
+            <td><div style="max-width:350px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.titulo}">${item.titulo}</div></td>
+            <td>
+                <button class="action-btn" onclick='approveInboxItem(${JSON.stringify(item).replace(/'/g, "\'")})' style="background-color: var(--primary);">Aprobar</button>
+                <button class="action-btn" onclick="discardInboxItem(${item.id})" style="background-color: #ff4d4d;">Descartar</button>
+            </td>
+        `;
+        inboxTableBody.appendChild(tr);
+    });
+}
+
+async function discardInboxItem(id) {
+    if (!confirm('¿Seguro que deseas descartar esta novedad? No se agregará a la matriz.')) return;
+    try {
+        const res = await fetch(`/api/inbox/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            fetchInbox();
+        }
+    } catch (e) {
+        console.error('Error discarding inbox item', e);
+    }
+}
+
+function approveInboxItem(item) {
+    // Cerrar modal inbox y abrir el de nueva normativa
+    if (modalInbox) modalInbox.classList.remove('active');
+    
+    reqForm.reset();
+    document.getElementById('reqId').value = '';
+    
+    // Create hidden input if not exists
+    let inboxInput = document.getElementById('inbox_id');
+    if (!inboxInput) {
+        inboxInput = document.createElement('input');
+        inboxInput.type = 'hidden';
+        inboxInput.id = 'inbox_id';
+        reqForm.appendChild(inboxInput);
+    }
+    inboxInput.value = item.id;
+    
+    document.getElementById('modalTitle').innerText = 'Aprobar Novedad';
+    
+    document.getElementById('tipo_norma').value = item.tipo_norma || '';
+    document.getElementById('anio_fecha').value = item.fecha || '';
+    document.getElementById('jurisdiccion_nacional').value = item.jurisdiccion_nacional || '';
+    document.getElementById('jurisdiccion_local').value = item.jurisdiccion_local || '';
+    document.getElementById('titulo').value = item.titulo || '';
+    document.getElementById('autoridad_aplicacion').value = item.autoridad_aplicacion || '';
+    document.getElementById('estado_cumplimiento').value = 'A Revisar';
+    document.getElementById('estado_vigencia').value = 'Vigente';
     
     modal.classList.add('active');
 }

@@ -51,3 +51,15 @@ class LegalRequirement(Base):
 
     workspace = relationship("Workspace", back_populates="requirements")
 
+
+class ScraperInbox(Base):
+    __tablename__ = "scraper_inbox"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fecha = Column(String, default="")
+    jurisdiccion_nacional = Column(String, default="")
+    jurisdiccion_local = Column(String, default="")
+    tipo_norma = Column(String, default="")
+    titulo = Column(Text, default="")
+    autoridad_aplicacion = Column(String, default="")
+

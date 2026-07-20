@@ -54,13 +54,25 @@ class LegalRequirementBase(BaseModel):
     estado_cumplimiento: Optional[str] = ""
 
 class LegalRequirementCreate(LegalRequirementBase):
-    pass
+    inbox_id: Optional[int] = None
 
 class LegalRequirementUpdate(LegalRequirementBase):
     pass
 
 class LegalRequirementResponse(LegalRequirementBase):
     id: int
+
+    class Config:
+        from_attributes = True
+
+class ScraperInboxResponse(BaseModel):
+    id: int
+    fecha: str
+    jurisdiccion_nacional: str
+    jurisdiccion_local: str
+    tipo_norma: str
+    titulo: str
+    autoridad_aplicacion: str
 
     class Config:
         from_attributes = True

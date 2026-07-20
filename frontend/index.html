@@ -29,6 +29,7 @@
 
             <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
+                <button class="btn-secondary" id="btnInbox" style="display: none; background-color: var(--accent);">Bandeja de Novedades</button>
                 <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
                 <button class="btn-secondary" id="btnAdmin" style="display: none;" onclick="window.location.href='/admin.html';">Usuarios</button>
                 <button class="btn-secondary" id="btnThemeToggle">☀️ Claro</button>
@@ -176,6 +177,29 @@
                 <button type="submit" class="btn">Actualizar Contraseña</button>
                 <p id="passwordMsg" style="margin-top: 10px; font-weight: 500;"></p>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Inbox -->
+    <div class="modal" id="modalInbox">
+        <div class="modal-content glass" style="max-width: 1000px; max-height: 80vh; overflow-y: auto;">
+            <span class="close-btn" id="closeInboxModal">&times;</span>
+            <h2 style="margin-top:0">Bandeja de Novedades (Scraper)</h2>
+            <p style="margin-bottom: 15px;">Revisa las normativas detectadas por el bot. Apruébalas para completar su clasificación y agregarlas a la matriz, o descártalas.</p>
+            <table style="width: 100%; text-align: left; margin-top: 15px;" id="inboxTable">
+                <thead>
+                    <tr>
+                        <th style="padding-bottom: 10px;">Fecha</th>
+                        <th style="padding-bottom: 10px;">Nacional</th>
+                        <th style="padding-bottom: 10px;">Local</th>
+                        <th style="padding-bottom: 10px;">Tipo</th>
+                        <th style="padding-bottom: 10px;">Título</th>
+                        <th style="padding-bottom: 10px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inboxTableBody">
+                </tbody>
+            </table>
         </div>
     </div>
 

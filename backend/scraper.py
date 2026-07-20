@@ -1,6 +1,6 @@
 import httpx
 from bs4 import BeautifulSoup
-from .models import LegalRequirement
+from .models import LegalRequirement, ScraperInbox
 from .notifications import send_telegram_alert, send_email_alert
 from sqlalchemy.orm import Session
 import asyncio
@@ -27,42 +27,28 @@ async def scrape_nacion(client, db: Session):
                 
                 if any(kw in texto_completo.lower() for kw in KEYWORDS):
                     titulo = texto_completo
-                    from .models import Workspace
-                    workspaces = db.query(Workspace).all()
+                    existe = db.query(ScraperInbox).filter(ScraperInbox.titulo == titulo).first()
                     
-                    for ws in workspaces:
-                        existe = db.query(LegalRequirement).filter(
-                            LegalRequirement.titulo == titulo,
-                            LegalRequirement.workspace_id == ws.id
-                        ).first()
-                        
-                        if not existe:
-                            import re
-                            patron = r"(Ley|Decreto|Resolución|Disposición|Decisión Administrativa|Aviso)\s*(?:N°|Nro\.)?\s*([\d\.]+/?\d*)"
-                            match = re.search(patron, titulo, re.IGNORECASE)
-                            if match:
-                                tipo_norma = f"{match.group(1).capitalize()} {match.group(2)}"
-                                numero_anio = match.group(2)
-                            else:
-                                tipo_norma = textos[1].split()[0] if len(textos)>1 and " " in textos[1] else "Normativa"
-                                numero_anio = ""
-                                
-                            today_str = datetime.now().strftime('%d/%m/%Y')
-                            req = LegalRequirement(
-                                workspace_id=ws.id,
-                                tipo_norma=tipo_norma,
-                                numero=numero_anio,
-                                anio_fecha=today_str,
-                                jurisdiccion_nacional="Argentina",
-                                jurisdiccion_local="Nacional",
-                                tema="Novedad Scraper",
-                                titulo=titulo,
-                                autoridad_aplicacion=textos[0] if textos else "Nacional",
-                                estado_cumplimiento="A Revisar",
-                                estado_vigencia="Vigente"
-                            )
-                            db.add(req)
-                            nuevas.append(req)
+                    if not existe:
+                        import re
+                        patron = r"(Ley|Decreto|Resolución|Disposición|Decisión Administrativa|Aviso)\s*(?:N°|Nro\.)?\s*([\d\.]+/?\d*)"
+                        match = re.search(patron, titulo, re.IGNORECASE)
+                        if match:
+                            tipo_norma = f"{match.group(1).capitalize()} {match.group(2)}"
+                        else:
+                            tipo_norma = textos[1].split()[0] if len(textos)>1 and " " in textos[1] else "Normativa"
+                            
+                        today_str = datetime.now().strftime('%d/%m/%Y')
+                        req = ScraperInbox(
+                            fecha=today_str,
+                            jurisdiccion_nacional="Argentina",
+                            jurisdiccion_local="Nacional",
+                            tipo_norma=tipo_norma,
+                            titulo=titulo,
+                            autoridad_aplicacion=textos[0] if textos else "Nacional"
+                        )
+                        db.add(req)
+                        nuevas.append(req)
                         
         resumen = analyze_html_for_summary(textos_brutos, "Nación Argentina")
     except Exception as e:
@@ -99,29 +85,18 @@ async def scrape_caba(client, db: Session):
                     textos_brutos.append(texto_completo)
                     if any(kw in texto_completo.lower() for kw in KEYWORDS):
                         titulo = texto_completo
-                        from .models import Workspace
-                        workspaces = db.query(Workspace).all()
-                        for ws in workspaces:
-                            existe = db.query(LegalRequirement).filter(
-                                LegalRequirement.titulo == titulo,
-                                LegalRequirement.workspace_id == ws.id
-                            ).first()
-                            
-                            if not existe:
-                                req = LegalRequirement(
-                                    workspace_id=ws.id,
-                                    tipo_norma=norma.get('tipo_norma_desc', 'Normativa'),
-                                    anio_fecha=today_caba,
-                                    jurisdiccion_nacional="Argentina",
-                                    jurisdiccion_local="CABA",
-                                    tema="Novedad Scraper",
-                                    titulo=titulo,
-                                    autoridad_aplicacion="CABA",
-                                    estado_cumplimiento="A Revisar",
-                                    estado_vigencia="Vigente"
-                                )
-                                db.add(req)
-                                nuevas.append(req)
+                        existe = db.query(ScraperInbox).filter(ScraperInbox.titulo == titulo).first()
+                        if not existe:
+                            req = ScraperInbox(
+                                fecha=today_caba,
+                                jurisdiccion_nacional="Argentina",
+                                jurisdiccion_local="CABA",
+                                tipo_norma=norma.get('tipo_norma_desc', 'Normativa'),
+                                titulo=titulo,
+                                autoridad_aplicacion="CABA"
+                            )
+                            db.add(req)
+                            nuevas.append(req)
         resumen = analyze_html_for_summary(textos_brutos, "CABA")
     except Exception as e:
         print(f"Error scraping CABA: {e}")
@@ -145,29 +120,18 @@ async def scrape_pba(client, db: Session):
                     texto = excerpt_tag.get_text(strip=True) if excerpt_tag else res.get_text(strip=True)
                     textos_brutos.append(texto)
                     
-                    from .models import Workspace
-                    workspaces = db.query(Workspace).all()
-                    for ws in workspaces:
-                        existe = db.query(LegalRequirement).filter(
-                            LegalRequirement.titulo == texto,
-                            LegalRequirement.workspace_id == ws.id
-                        ).first()
-                        
-                        if not existe and texto:
-                            req = LegalRequirement(
-                                workspace_id=ws.id,
-                                tipo_norma="Normativa",
-                                anio_fecha=today_pba,
-                                jurisdiccion_nacional="Argentina",
-                                jurisdiccion_local="PBA",
-                                tema="Novedad Scraper",
-                                titulo=texto,
-                                autoridad_aplicacion="Provincia de Buenos Aires",
-                                estado_cumplimiento="A Revisar",
-                                estado_vigencia="Vigente"
-                            )
-                            db.add(req)
-                            nuevas.append(req)
+                    existe = db.query(ScraperInbox).filter(ScraperInbox.titulo == texto).first()
+                    if not existe and texto:
+                        req = ScraperInbox(
+                            fecha=today_pba,
+                            jurisdiccion_nacional="Argentina",
+                            jurisdiccion_local="PBA",
+                            tipo_norma="Normativa",
+                            titulo=texto,
+                            autoridad_aplicacion="Provincia de Buenos Aires"
+                        )
+                        db.add(req)
+                        nuevas.append(req)
         resumen = analyze_html_for_summary(textos_brutos, "Provincia de Buenos Aires")
     except Exception as e:
         print(f"Error scraping PBA: {e}")
@@ -217,31 +181,23 @@ async def scrape_pdf_jurisdiccion(client, db: Session, url: str, jurisdiccion: s
                             
                             titulo_con_fecha = f"{titulo} ({today_str})"
                             
-                            from .models import Workspace
-                            workspaces = db.query(Workspace).all()
-                            for ws in workspaces:
-                                existe = db.query(LegalRequirement).filter(
-                                    LegalRequirement.jurisdiccion_local == jurisdiccion, 
-                                    LegalRequirement.titulo == titulo_con_fecha,
-                                    LegalRequirement.workspace_id == ws.id
-                                ).first()
-                                
-                                if not existe:
-                                    nacion_str = "Paraguay" if jurisdiccion == "Paraguay" else "Argentina"
-                                    req = LegalRequirement(
-                                        workspace_id=ws.id,
-                                        tipo_norma=tipo,
-                                        anio_fecha=today_str,
-                                        jurisdiccion_nacional=nacion_str,
-                                        jurisdiccion_local=jurisdiccion,
-                                        tema="Novedad Scraper",
-                                        titulo=titulo_con_fecha,
-                                        autoridad_aplicacion=jurisdiccion,
-                                        estado_cumplimiento="A Revisar",
-                                        estado_vigencia="Vigente"
-                                    )
-                                    db.add(req)
-                                    nuevas.append(req)
+                            existe = db.query(ScraperInbox).filter(
+                                ScraperInbox.jurisdiccion_local == jurisdiccion, 
+                                ScraperInbox.titulo == titulo_con_fecha
+                            ).first()
+                            
+                            if not existe:
+                                nacion_str = "Paraguay" if jurisdiccion == "Paraguay" else "Argentina"
+                                req = ScraperInbox(
+                                    fecha=today_str,
+                                    jurisdiccion_nacional=nacion_str,
+                                    jurisdiccion_local=jurisdiccion,
+                                    tipo_norma=tipo,
+                                    titulo=titulo_con_fecha,
+                                    autoridad_aplicacion=jurisdiccion
+                                )
+                                db.add(req)
+                                nuevas.append(req)
                     except Exception as e:
                         print(f"Error parseando PDF {jurisdiccion}: {e}")
                         resumen = ["Error en la lectura por IA del PDF."]
@@ -273,28 +229,18 @@ async def scrape_corrientes(client, db: Session):
                 textos_brutos.append(title)
                 
                 if any(kw in texto_completo.lower() for kw in KEYWORDS):
-                    from .models import Workspace
-                    workspaces = db.query(Workspace).all()
-                    for ws in workspaces:
-                        existe = db.query(LegalRequirement).filter(
-                            LegalRequirement.titulo == title,
-                            LegalRequirement.workspace_id == ws.id
-                        ).first()
-                        if not existe and title:
-                            req = LegalRequirement(
-                                workspace_id=ws.id,
-                                tipo_norma="Normativa",
-                                anio_fecha=datetime.now().strftime('%d/%m/%Y'),
-                                jurisdiccion_nacional="Argentina",
-                                jurisdiccion_local="Corrientes",
-                                tema="Novedad Scraper",
-                                titulo=title,
-                                autoridad_aplicacion="Corrientes",
-                                estado_cumplimiento="A Revisar",
-                                estado_vigencia="Vigente"
-                            )
-                            db.add(req)
-                            nuevas.append(req)
+                    existe = db.query(ScraperInbox).filter(ScraperInbox.titulo == title).first()
+                    if not existe and title:
+                        req = ScraperInbox(
+                            fecha=datetime.now().strftime('%d/%m/%Y'),
+                            jurisdiccion_nacional="Argentina",
+                            jurisdiccion_local="Corrientes",
+                            tipo_norma="Normativa",
+                            titulo=title,
+                            autoridad_aplicacion="Corrientes"
+                        )
+                        db.add(req)
+                        nuevas.append(req)
         resumen = analyze_html_for_summary(textos_brutos, "Corrientes")
     except Exception as e:
         print(f"Error scraping Corrientes: {e}")

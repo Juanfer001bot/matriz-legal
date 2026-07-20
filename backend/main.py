@@ -274,8 +274,14 @@ def create_requirement(req: schemas.LegalRequirementCreate, db: Session = Depend
     if current_user.email != "juan@test.com" and workspace_id not in [w.id for w in current_user.workspaces]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
-    db_req = models.LegalRequirement(**req.dict(exclude={'workspace_id'}), workspace_id=workspace_id)
+    db_req = models.LegalRequirement(**req.dict(exclude={'workspace_id', 'inbox_id'}), workspace_id=workspace_id)
     db.add(db_req)
+    
+    if req.inbox_id:
+        inbox_item = db.query(models.ScraperInbox).filter(models.ScraperInbox.id == req.inbox_id).first()
+        if inbox_item:
+            db.delete(inbox_item)
+            
     db.commit()
     db.refresh(db_req)
     return db_req
@@ -289,7 +295,7 @@ def update_requirement(req_id: int, req: schemas.LegalRequirementCreate, db: Ses
     if current_user.email != "juan@test.com" and db_req.workspace_id not in [w.id for w in current_user.workspaces]:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    for key, value in req.dict(exclude_unset=True, exclude={'workspace_id'}).items():
+    for key, value in req.dict(exclude_unset=True, exclude={'workspace_id', 'inbox_id'}).items():
         setattr(db_req, key, value)
         
     db.commit()
@@ -308,6 +314,23 @@ def delete_requirement(req_id: int, db: Session = Depends(get_db), current_user:
     db.delete(db_req)
     db.commit()
     return {"status": "deleted"}
+
+@app.get("/api/inbox", response_model=List[schemas.ScraperInboxResponse])
+def get_inbox_items(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.email != "juan@test.com":
+        return []
+    return db.query(models.ScraperInbox).all()
+
+@app.delete("/api/inbox/{item_id}")
+def discard_inbox_item(item_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403)
+    item = db.query(models.ScraperInbox).filter(models.ScraperInbox.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404)
+    db.delete(item)
+    db.commit()
+    return {"status": "ok"}
 
 # Bot Endpoints
 @app.post("/api/bot/run-scraper")
@@ -364,6 +387,13 @@ def cargar_leyes(email: str = "juan@test.com"):
 def alert_email(body: dict):
     send_email_alert(body.get("subject", "Alerta Legal"), body.get("message", ""))
     return {"status": "success"}
+
+# Endpoint temporal para limpiar basura del scraper
+@app.get("/api/bot/cleanup-scraper-junk")
+def cleanup_scraper_junk(db: Session = Depends(get_db)):
+    deleted_count = db.query(models.LegalRequirement).filter(models.LegalRequirement.tema == "Novedad Scraper").delete()
+    db.commit()
+    return {"status": "success", "message": f"Se eliminaron {deleted_count} normativas basura de la matriz."}
 
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
