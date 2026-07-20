@@ -492,6 +492,7 @@ btnNewActionPlan.addEventListener('click', () => {
     actionPlanForm.reset();
     document.getElementById('ap_id').value = '';
     document.getElementById('modalActionTitle').innerText = 'Nuevo Plan de Acción';
+    populateActionPlanRequirements();
     btnDeleteActionPlan.style.display = 'none';
     modalActionPlan.classList.add('active');
 });
@@ -530,9 +531,18 @@ function renderActionPlanTable() {
     actionPlanTableBody.innerHTML = '';
     
     filtered.forEach(ap => {
+        let reqText = "-";
+        if (ap.requirement_id) {
+            const req = requirements.find(r => r.id === ap.requirement_id);
+            if (req) {
+                reqText = `#${req.id} - ${req.tipo_norma} ${req.numero}`;
+            }
+        }
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${ap.nc_id}</td>
+            <td><span class="badge" style="background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);">${reqText}</span></td>
             <td>${ap.origen_nc}</td>
             <td>${ap.responsable}</td>
             <td><div style="max-width:250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${ap.accion_implementar}">${ap.accion_implementar}</div></td>
@@ -555,6 +565,7 @@ function editActionPlan(id) {
     
     document.getElementById('ap_nc_id').value = ap.nc_id || '';
     document.getElementById('ap_origen_nc').value = ap.origen_nc || '';
+    populateActionPlanRequirements(ap.requirement_id);
     document.getElementById('ap_responsable').value = ap.responsable || '';
     document.getElementById('ap_fecha_compromiso').value = ap.fecha_compromiso || '';
     document.getElementById('ap_accion_implementar').value = ap.accion_implementar || '';
@@ -571,6 +582,7 @@ actionPlanForm.addEventListener('submit', async (e) => {
     
     const data = {
         nc_id: document.getElementById('ap_nc_id').value,
+        requirement_id: document.getElementById('ap_requirement_id').value ? parseInt(document.getElementById('ap_requirement_id').value) : null,
         origen_nc: document.getElementById('ap_origen_nc').value,
         responsable: document.getElementById('ap_responsable').value,
         fecha_compromiso: document.getElementById('ap_fecha_compromiso').value,
@@ -623,3 +635,28 @@ btnDeleteActionPlan.addEventListener('click', async () => {
         console.error(e);
     }
 });
+
+
+function populateActionPlanRequirements(selectedValue = "") {
+    const select = document.getElementById('ap_requirement_id');
+    select.innerHTML = '<option value="">-- Ninguna (Libre) --</option>';
+    
+    // Filter requirements that are not "Cumple"
+    const problematicReqs = requirements.filter(r => 
+        r.estado_cumplimiento && 
+        (r.estado_cumplimiento.toLowerCase().includes('no cumple') || 
+         r.estado_cumplimiento.toLowerCase().includes('proceso') ||
+         r.estado_cumplimiento.toLowerCase().includes('revisar'))
+    );
+    
+    problematicReqs.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = `#${r.id} - ${r.tipo_norma} ${r.numero} (${r.estado_cumplimiento})`;
+        select.appendChild(opt);
+    });
+    
+    if (selectedValue) {
+        select.value = selectedValue;
+    }
+}

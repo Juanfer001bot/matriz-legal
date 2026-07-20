@@ -71,6 +71,7 @@ class ActionPlan(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     workspace_id = Column(Integer, ForeignKey("workspaces.id"))
+    requirement_id = Column(Integer, ForeignKey("legal_requirements.id"), nullable=True)
     
     nc_id = Column(String, default="")
     origen_nc = Column(String, default="")
@@ -81,4 +82,5 @@ class ActionPlan(Base):
     fecha_cierre = Column(String, default="")
 
     workspace = relationship("Workspace")
+    requirement = relationship("LegalRequirement")
 

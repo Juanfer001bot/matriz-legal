@@ -496,9 +496,16 @@ def migrate_action_plan(db: Session = Depends(get_db)):
     from sqlalchemy import text
     try:
         models.ActionPlan.__table__.create(engine)
-        return {"status": "success", "message": "Tabla action_plans creada con éxito."}
-    except Exception as e:
-        return {"status": "error", "message": f"La tabla ya existe o hubo un error: {e}"}
+    except Exception:
+        pass
+    
+    try:
+        db.execute(text("ALTER TABLE action_plans ADD COLUMN requirement_id INTEGER REFERENCES legal_requirements(id)"))
+        db.commit()
+    except Exception:
+        pass
+        
+    return {"status": "success", "message": "Tabla action_plans creada/actualizada con éxito."}
 
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

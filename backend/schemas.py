@@ -81,6 +81,7 @@ class ScraperInboxResponse(BaseModel):
 
 class ActionPlanBase(BaseModel):
     workspace_id: Optional[int] = None
+    requirement_id: Optional[int] = None
     nc_id: Optional[str] = ""
     origen_nc: Optional[str] = ""
     responsable: Optional[str] = ""
