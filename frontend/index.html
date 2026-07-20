@@ -44,6 +44,11 @@
             <input type="text" id="searchBox" placeholder="Buscar por título, norma o ID...">
             <select id="filterAmbito">
                 <option value="">Todos los Ámbitos (Temas)</option>
+                <option value="Medio Ambiente (ISO 14001)">Medio Ambiente (ISO 14001)</option>
+                <option value="SST (ISO 45001)">SST (ISO 45001)</option>
+                <option value="Energia (ISO 50001)">Energia (ISO 50001)</option>
+                <option value="Calidad (ISO 9001)">Calidad (ISO 9001)</option>
+                <option value="Seguridad Vial (ISO 39001)">Seguridad Vial (ISO 39001)</option>
             </select>
             <select id="filterEstado">
                 <option value="">Cualquier Estado de Cumplimiento</option>
@@ -136,7 +141,13 @@
                         </div>
                         <div>
                             <label>Tema</label>
-                            <input type="text" id="tema">
+                            <select id="tema">
+                                <option value="Medio Ambiente (ISO 14001)">Medio Ambiente (ISO 14001)</option>
+                                <option value="SST (ISO 45001)">SST (ISO 45001)</option>
+                                <option value="Energia (ISO 50001)">Energia (ISO 50001)</option>
+                                <option value="Calidad (ISO 9001)">Calidad (ISO 9001)</option>
+                                <option value="Seguridad Vial (ISO 39001)">Seguridad Vial (ISO 39001)</option>
+                            </select>
                         </div>
                         <div class="full-width">
                             <label>Título</label>

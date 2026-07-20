@@ -248,27 +248,7 @@ async function fetchRequirements() {
 }
 
 function populateTemas() {
-    const currentValue = filterAmbito.value;
-    const temas = new Set();
-    
-    requirements.forEach(req => {
-        if (req.tema) {
-            temas.add(req.tema.trim());
-        }
-    });
-    
-    filterAmbito.innerHTML = '<option value="">Todos los Ámbitos (Temas)</option>';
-    
-    Array.from(temas).sort().forEach(tema => {
-        const opt = document.createElement('option');
-        opt.value = tema;
-        opt.textContent = tema;
-        filterAmbito.appendChild(opt);
-    });
-    
-    if (temas.has(currentValue)) {
-        filterAmbito.value = currentValue;
-    }
+    // Ya no es necesario poblar dinámicamente porque los temas están predefinidos
 }
 
 function getBadgeClass(estado) {

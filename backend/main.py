@@ -507,5 +507,28 @@ def migrate_action_plan(db: Session = Depends(get_db)):
         
     return {"status": "success", "message": "Tabla action_plans creada/actualizada con éxito."}
 
+@app.get("/api/bot/normalize-temas")
+def normalize_temas(db: Session = Depends(get_db)):
+    reqs = db.query(models.LegalRequirement).all()
+    count = 0
+    for req in reqs:
+        t = (req.tema or "").lower()
+        if "ambiente" in t or "ambiental" in t:
+            req.tema = "Medio Ambiente (ISO 14001)"
+        elif "sst" in t or "higiene" in t or "salud" in t or "seguridad" in t and "vial" not in t:
+            req.tema = "SST (ISO 45001)"
+        elif "energ" in t:
+            req.tema = "Energia (ISO 50001)"
+        elif "calidad" in t:
+            req.tema = "Calidad (ISO 9001)"
+        elif "vial" in t or "transito" in t or "tránsito" in t:
+            req.tema = "Seguridad Vial (ISO 39001)"
+        else:
+            req.tema = "Medio Ambiente (ISO 14001)" # Default if empty or unknown
+        count += 1
+    
+    db.commit()
+    return {"status": "success", "message": f"Se normalizaron {count} temas correctamente."}
+
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
