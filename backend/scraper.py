@@ -75,13 +75,27 @@ async def scrape_caba(client, db: Session):
     url = f"https://api-restboletinoficial.buenosaires.gob.ar/obtenerBoletin/{today_caba}/true"
     nuevas = []
     textos_brutos = []
+    
+    def extract_caba_normas(node, items):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                extract_caba_normas(v, items)
+        elif isinstance(node, list):
+            for item in node:
+                if isinstance(item, dict) and ('sumario' in item or 'sintesis' in item):
+                    items.append(item)
+                    
     try:
         response = await client.get(url)
         if response.status_code == 200:
             data = response.json()
             if "normas" in data:
-                for norma in data["normas"]:
-                    texto_completo = f"{norma.get('reparticion', '')} - {norma.get('sintesis', '')}"
+                normas_list = []
+                extract_caba_normas(data["normas"], normas_list)
+                for norma in normas_list:
+                    rep_name = norma.get('nombre', norma.get('reparticion', ''))
+                    sumario = norma.get('sumario', norma.get('sintesis', ''))
+                    texto_completo = f"{rep_name} - {sumario}"
                     textos_brutos.append(texto_completo)
                     if any(kw in texto_completo.lower() for kw in KEYWORDS):
                         titulo = texto_completo
@@ -102,7 +116,7 @@ async def scrape_caba(client, db: Session):
                                     jurisdiccion_local="CABA",
                                     tema="Novedad Scraper",
                                     titulo=titulo,
-                                    autoridad_aplicacion=norma.get('reparticion', 'CABA'),
+                                    autoridad_aplicacion="CABA",
                                     estado_cumplimiento="A Revisar",
                                     estado_vigencia="Vigente"
                                 )
@@ -125,9 +139,10 @@ async def scrape_pba(client, db: Session):
             html = response.text
             if "No se encontraron resultados" not in html:
                 soup = BeautifulSoup(html, "html.parser")
-                resultados = soup.find_all("div", class_="bulletin-box")
+                resultados = soup.find_all("div", class_="result-box")
                 for res in resultados:
-                    texto = res.get_text(strip=True)
+                    excerpt_tag = res.find("p", class_="excerpt")
+                    texto = excerpt_tag.get_text(strip=True) if excerpt_tag else res.get_text(strip=True)
                     textos_brutos.append(texto)
                     
                     from .models import Workspace
@@ -240,10 +255,51 @@ async def scrape_pdf_jurisdiccion(client, db: Session, url: str, jurisdiccion: s
     return nuevas, resumen
 
 async def scrape_misiones(client, db: Session):
-    return await scrape_pdf_jurisdiccion(client, db, "https://boletinoficial.misiones.gob.ar/", "Misiones")
+    return await scrape_pdf_jurisdiccion(client, db, "https://www.boletin.misiones.gov.ar/", "Misiones")
 
 async def scrape_corrientes(client, db: Session):
-    return await scrape_pdf_jurisdiccion(client, db, "https://boletinoficial.corrientes.gob.ar/feed", "Corrientes")
+    url = "https://boletinoficial.corrientes.gob.ar/feed"
+    nuevas = []
+    textos_brutos = []
+    try:
+        response = await client.get(url)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            items = soup.find_all("item")
+            for item in items:
+                title = item.title.text if item.title else ""
+                desc = item.description.text if item.description else ""
+                texto_completo = f"{title} - {desc}"
+                textos_brutos.append(title)
+                
+                if any(kw in texto_completo.lower() for kw in KEYWORDS):
+                    from .models import Workspace
+                    workspaces = db.query(Workspace).all()
+                    for ws in workspaces:
+                        existe = db.query(LegalRequirement).filter(
+                            LegalRequirement.titulo == title,
+                            LegalRequirement.workspace_id == ws.id
+                        ).first()
+                        if not existe and title:
+                            req = LegalRequirement(
+                                workspace_id=ws.id,
+                                tipo_norma="Normativa",
+                                anio_fecha=datetime.now().strftime('%d/%m/%Y'),
+                                jurisdiccion_nacional="Argentina",
+                                jurisdiccion_local="Corrientes",
+                                tema="Novedad Scraper",
+                                titulo=title,
+                                autoridad_aplicacion="Corrientes",
+                                estado_cumplimiento="A Revisar",
+                                estado_vigencia="Vigente"
+                            )
+                            db.add(req)
+                            nuevas.append(req)
+        resumen = analyze_html_for_summary(textos_brutos, "Corrientes")
+    except Exception as e:
+        print(f"Error scraping Corrientes: {e}")
+        resumen = ["Error al obtener resumen de Corrientes."]
+    return nuevas, resumen
 
 async def scrape_paraguay(client, db: Session):
     return await scrape_pdf_jurisdiccion(client, db, "https://www.gacetaoficial.gov.py/", "Paraguay")
@@ -251,7 +307,10 @@ async def scrape_paraguay(client, db: Session):
 async def scrape_boletin_oficial(db: Session):
     print(f"[{datetime.now()}] Iniciando scraping de EBY con Heartbeat...")
     
-    async with httpx.AsyncClient(timeout=30.0, verify=False, follow_redirects=True) as client:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+    }
+    async with httpx.AsyncClient(timeout=30.0, verify=False, follow_redirects=True, headers=headers) as client:
         nuevas_nacion, res_nacion = await scrape_nacion(client, db)
         nuevas_caba, res_caba = await scrape_caba(client, db)
         nuevas_pba, res_pba = await scrape_pba(client, db)
