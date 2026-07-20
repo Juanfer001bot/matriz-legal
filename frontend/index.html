@@ -108,6 +108,52 @@
                 </tbody>
             </table>
         </section>
+
+        <section class="filters-section glass" id="participacionFilters" style="display: none;">
+            <div style="display: flex; gap: 15px; width: 100%;">
+                <button class="btn-primary" id="btnTabConsultas" style="flex: 1;">Buzón de Consultas y Sugerencias</button>
+                <button class="btn-primary" id="btnTabMinutas" style="flex: 1; background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);">Minutas de Reunión</button>
+            </div>
+        </section>
+
+        <section class="table-container glass" id="consultasTableContainer" style="display: none;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-size: 1.2rem;">Consultas, Sugerencias y Avisos de Riesgo</h2>
+                <button class="btn-primary" id="btnNewConsulta">NUEVA CONSULTA</button>
+            </div>
+            <table id="consultasTable">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Autor</th>
+                        <th>Detalle</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="consultasTableBody"></tbody>
+            </table>
+        </section>
+
+        <section class="table-container glass" id="minutasTableContainer" style="display: none;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-size: 1.2rem;">Minutas de Reunión</h2>
+                <button class="btn-primary" id="btnNewMinuta">NUEVA MINUTA</button>
+            </div>
+            <table id="minutasTable">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Participantes</th>
+                        <th>Temas Tratados</th>
+                        <th>Adjunto</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="minutasTableBody"></tbody>
+            </table>
+        </section>
     </div>
 
     <!-- Modal Form (Matriz) -->
