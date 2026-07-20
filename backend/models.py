@@ -65,3 +65,20 @@ class ScraperInbox(Base):
     autoridad_aplicacion = Column(String, default="")
     link_web = Column(String, nullable=True)
 
+
+class ActionPlan(Base):
+    __tablename__ = "action_plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"))
+    
+    nc_id = Column(String, default="")
+    origen_nc = Column(String, default="")
+    responsable = Column(String, default="")
+    fecha_compromiso = Column(String, default="")
+    accion_implementar = Column(Text, default="")
+    estado_avance = Column(String, default="Pendiente")
+    fecha_cierre = Column(String, default="")
+
+    workspace = relationship("Workspace")
+

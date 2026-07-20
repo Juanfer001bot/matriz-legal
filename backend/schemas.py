@@ -78,3 +78,25 @@ class ScraperInboxResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ActionPlanBase(BaseModel):
+    workspace_id: Optional[int] = None
+    nc_id: Optional[str] = ""
+    origen_nc: Optional[str] = ""
+    responsable: Optional[str] = ""
+    fecha_compromiso: Optional[str] = ""
+    accion_implementar: Optional[str] = ""
+    estado_avance: Optional[str] = "Pendiente"
+    fecha_cierre: Optional[str] = ""
+
+class ActionPlanCreate(ActionPlanBase):
+    pass
+
+class ActionPlanUpdate(ActionPlanBase):
+    pass
+
+class ActionPlanResponse(ActionPlanBase):
+    id: int
+
+    class Config:
+        from_attributes = True

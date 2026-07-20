@@ -333,6 +333,67 @@ def discard_inbox_item(item_id: int, current_user: models.User = Depends(get_cur
     db.commit()
     return {"status": "ok"}
 
+# Action Plans Endpoints
+@app.get("/api/action-plans", response_model=List[schemas.ActionPlanResponse])
+def get_action_plans(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if not workspace_id:
+        if current_user.workspaces:
+            workspace_id = current_user.workspaces[0].id
+        else:
+            return []
+            
+    if current_user.email != "juan@test.com" and workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized for this workspace")
+        
+    return db.query(models.ActionPlan).filter(models.ActionPlan.workspace_id == workspace_id).order_by(models.ActionPlan.id.asc()).all()
+
+@app.post("/api/action-plans", response_model=schemas.ActionPlanResponse)
+def create_action_plan(plan: schemas.ActionPlanCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    workspace_id = plan.workspace_id
+    if not workspace_id:
+        if current_user.workspaces:
+            workspace_id = current_user.workspaces[0].id
+        else:
+            raise HTTPException(status_code=400, detail="No workspace provided")
+            
+    if current_user.email != "juan@test.com" and workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    db_plan = models.ActionPlan(**plan.dict(exclude={'workspace_id'}), workspace_id=workspace_id)
+    db.add(db_plan)
+    db.commit()
+    db.refresh(db_plan)
+    return db_plan
+
+@app.put("/api/action-plans/{plan_id}", response_model=schemas.ActionPlanResponse)
+def update_action_plan(plan_id: int, plan: schemas.ActionPlanCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_plan = db.query(models.ActionPlan).filter(models.ActionPlan.id == plan_id).first()
+    if not db_plan:
+        raise HTTPException(status_code=404, detail="Action Plan not found")
+        
+    if current_user.email != "juan@test.com" and db_plan.workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    for key, value in plan.dict(exclude_unset=True, exclude={'workspace_id'}).items():
+        setattr(db_plan, key, value)
+        
+    db.commit()
+    db.refresh(db_plan)
+    return db_plan
+
+@app.delete("/api/action-plans/{plan_id}")
+def delete_action_plan(plan_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_plan = db.query(models.ActionPlan).filter(models.ActionPlan.id == plan_id).first()
+    if not db_plan:
+        raise HTTPException(status_code=404, detail="Action Plan not found")
+        
+    if current_user.email != "juan@test.com" and db_plan.workspace_id not in [w.id for w in current_user.workspaces]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    db.delete(db_plan)
+    db.commit()
+    return {"status": "deleted"}
+
 # Bot Endpoints
 @app.post("/api/bot/run-scraper")
 async def trigger_scraper(authorization: str = Header(None), db: Session = Depends(get_db)):
@@ -429,6 +490,15 @@ def migrate_links(db: Session = Depends(get_db)):
             
     db.commit()
     return {"status": "success", "message": f"Migración completa. Se autocompletaron {count} enlaces."}
+
+@app.get("/api/bot/migrate-action-plan")
+def migrate_action_plan(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        models.ActionPlan.__table__.create(engine)
+        return {"status": "success", "message": "Tabla action_plans creada con éxito."}
+    except Exception as e:
+        return {"status": "error", "message": f"La tabla ya existe o hubo un error: {e}"}
 
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

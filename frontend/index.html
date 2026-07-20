@@ -28,6 +28,8 @@
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn" id="btnMatrizView" style="display: none;">Ver Matriz Legal</button>
+                <button class="btn" id="btnActionPlans">Planes de Acción</button>
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
                 <button class="btn-secondary" id="btnInbox" style="display: none; background-color: var(--accent);">Bandeja de Novedades</button>
                 <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
@@ -38,7 +40,7 @@
         </div>
     </header>
 
-        <section class="filters-section glass">
+        <section class="filters-section glass" id="matrizFilters">
             <input type="text" id="searchBox" placeholder="Buscar por título, norma o ID...">
             <select id="filterAmbito">
                 <option value="">Todos los Ámbitos (Temas)</option>
@@ -53,7 +55,7 @@
             </select>
         </section>
 
-        <section class="table-container glass">
+        <section class="table-container glass" id="matrizTableContainer">
             <table id="legalTable">
                 <thead>
                     <tr>
@@ -72,9 +74,35 @@
                 </tbody>
             </table>
         </section>
+        
+        <section class="filters-section glass" id="actionPlanFilters" style="display: none;">
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+                <input type="text" id="searchActionBox" placeholder="Buscar por responsable, NC, acción..." style="flex: 1; margin-right: 15px;">
+                <button class="btn-primary" id="btnNewActionPlan">NUEVO PLAN DE ACCIÓN</button>
+            </div>
+        </section>
+
+        <section class="table-container glass" id="actionPlanTableContainer" style="display: none;">
+            <table id="actionPlanTable">
+                <thead>
+                    <tr>
+                        <th>ID NC</th>
+                        <th>Origen NC</th>
+                        <th>Responsable</th>
+                        <th>Acción</th>
+                        <th>Estado</th>
+                        <th>Cierre</th>
+                        <th>Opciones</th>
+                    </tr>
+                </thead>
+                <tbody id="actionPlanTableBody">
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </section>
     </div>
 
-    <!-- Modal Form -->
+    <!-- Modal Form (Matriz) -->
     <div id="modalForm" class="modal">
         <div class="modal-content glass" style="max-width: 900px;">
             <span class="close-btn">&times;</span>
@@ -166,6 +194,59 @@
 
                 <div class="modal-actions">
                     <button type="submit" class="btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Form (Action Plan) -->
+    <div id="modalActionPlan" class="modal">
+        <div class="modal-content glass" style="max-width: 600px;">
+            <span class="close-btn" id="closeActionPlanModal">&times;</span>
+            <h2 id="modalActionTitle">Nuevo Plan de Acción</h2>
+            <form id="actionPlanForm">
+                <input type="hidden" id="ap_id">
+                
+                <div class="form-section">
+                    <div class="grid-2">
+                        <div>
+                            <label>ID de la NC</label>
+                            <input type="text" id="ap_nc_id" placeholder="NC-2026-01" required>
+                        </div>
+                        <div>
+                            <label>Origen de la NC</label>
+                            <input type="text" id="ap_origen_nc" placeholder="Auditoría, Accidente, etc." required>
+                        </div>
+                        <div>
+                            <label>Responsable</label>
+                            <input type="text" id="ap_responsable" required>
+                        </div>
+                        <div>
+                            <label>Estado de avance</label>
+                            <select id="ap_estado_avance">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En Proceso">En Proceso</option>
+                                <option value="Cerrado">Cerrado</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Fecha de compromiso</label>
+                            <input type="date" id="ap_fecha_compromiso">
+                        </div>
+                        <div>
+                            <label>Fecha de cierre</label>
+                            <input type="date" id="ap_fecha_cierre">
+                        </div>
+                        <div class="full-width">
+                            <label>Acción a implementar</label>
+                            <textarea id="ap_accion_implementar" rows="3" required></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="button" class="btn" id="btnDeleteActionPlan" style="display: none; background-color: #ff4d4d; color: white; border: none;">Eliminar</button>
                 </div>
             </form>
         </div>

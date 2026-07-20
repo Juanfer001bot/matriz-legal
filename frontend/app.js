@@ -31,7 +31,7 @@ const workspaceSelect = document.getElementById('workspaceSelect');
 
 workspaceSelect.addEventListener('change', () => {
     currentWorkspaceId = workspaceSelect.value;
-    fetchRequirements();
+    fetchRequirements(); fetchActionPlans();
 });
 
 // Event Listeners
@@ -87,9 +87,9 @@ async function fetchMe() {
                     workspaceContainer.style.display = 'flex';
                 }
                 currentWorkspaceId = workspaceSelect.value;
-                fetchRequirements();
+                fetchRequirements(); fetchActionPlans();
             } else {
-                fetchRequirements();
+                fetchRequirements(); fetchActionPlans();
             }
         }
     } catch (e) {
@@ -217,7 +217,7 @@ reqForm.addEventListener('submit', async (e) => {
 
         if (response.ok) {
             modal.classList.remove('active');
-            fetchRequirements();
+            fetchRequirements(); fetchActionPlans();
         } else {
             console.error('Error al guardar');
         }
@@ -444,3 +444,182 @@ function approveInboxItem(item) {
     
     modal.classList.add('active');
 }
+
+// --- LOGICA DE PLANES DE ACCION ---
+let actionPlans = [];
+const API_ACTION_URL = '/api/action-plans';
+
+const btnMatrizView = document.getElementById('btnMatrizView');
+const btnActionPlans = document.getElementById('btnActionPlans');
+const matrizFilters = document.getElementById('matrizFilters');
+const matrizTableContainer = document.getElementById('matrizTableContainer');
+const actionPlanFilters = document.getElementById('actionPlanFilters');
+const actionPlanTableContainer = document.getElementById('actionPlanTableContainer');
+const actionPlanTableBody = document.getElementById('actionPlanTableBody');
+const searchActionBox = document.getElementById('searchActionBox');
+
+const modalActionPlan = document.getElementById('modalActionPlan');
+const closeActionPlanModal = document.getElementById('closeActionPlanModal');
+const btnNewActionPlan = document.getElementById('btnNewActionPlan');
+const actionPlanForm = document.getElementById('actionPlanForm');
+const btnDeleteActionPlan = document.getElementById('btnDeleteActionPlan');
+
+btnMatrizView.addEventListener('click', () => {
+    btnMatrizView.style.display = 'none';
+    btnActionPlans.style.display = 'inline-block';
+    
+    matrizFilters.style.display = 'flex';
+    matrizTableContainer.style.display = 'block';
+    
+    actionPlanFilters.style.display = 'none';
+    actionPlanTableContainer.style.display = 'none';
+});
+
+btnActionPlans.addEventListener('click', () => {
+    btnActionPlans.style.display = 'none';
+    btnMatrizView.style.display = 'inline-block';
+    
+    matrizFilters.style.display = 'none';
+    matrizTableContainer.style.display = 'none';
+    
+    actionPlanFilters.style.display = 'flex';
+    actionPlanTableContainer.style.display = 'block';
+    
+    fetchActionPlans();
+});
+
+btnNewActionPlan.addEventListener('click', () => {
+    actionPlanForm.reset();
+    document.getElementById('ap_id').value = '';
+    document.getElementById('modalActionTitle').innerText = 'Nuevo Plan de Acción';
+    btnDeleteActionPlan.style.display = 'none';
+    modalActionPlan.classList.add('active');
+});
+
+closeActionPlanModal.addEventListener('click', () => {
+    modalActionPlan.classList.remove('active');
+});
+
+searchActionBox.addEventListener('input', renderActionPlanTable);
+
+async function fetchActionPlans() {
+    try {
+        const url = currentWorkspaceId ? `${API_ACTION_URL}?workspace_id=${currentWorkspaceId}` : API_ACTION_URL;
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+            actionPlans = await response.json();
+            renderActionPlanTable();
+        }
+    } catch (e) {
+        console.error('Error fetching action plans', e);
+    }
+}
+
+function renderActionPlanTable() {
+    const term = searchActionBox.value.toLowerCase();
+    
+    const filtered = actionPlans.filter(ap => {
+        return (ap.nc_id || '').toLowerCase().includes(term) ||
+               (ap.origen_nc || '').toLowerCase().includes(term) ||
+               (ap.responsable || '').toLowerCase().includes(term) ||
+               (ap.accion_implementar || '').toLowerCase().includes(term);
+    });
+    
+    actionPlanTableBody.innerHTML = '';
+    
+    filtered.forEach(ap => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${ap.nc_id}</td>
+            <td>${ap.origen_nc}</td>
+            <td>${ap.responsable}</td>
+            <td><div style="max-width:250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${ap.accion_implementar}">${ap.accion_implementar}</div></td>
+            <td><span class="badge ${ap.estado_avance === 'Cerrado' ? 'cumple' : (ap.estado_avance === 'En Proceso' ? 'en-proceso' : 'no-evaluado')}">${ap.estado_avance}</span></td>
+            <td>${ap.fecha_cierre || '-'}</td>
+            <td>
+                <button class="action-btn" onclick="editActionPlan(${ap.id})">Detalles</button>
+            </td>
+        `;
+        actionPlanTableBody.appendChild(tr);
+    });
+}
+
+function editActionPlan(id) {
+    const ap = actionPlans.find(a => a.id === id);
+    if (!ap) return;
+    
+    document.getElementById('ap_id').value = ap.id;
+    document.getElementById('modalActionTitle').innerText = 'Editar Plan de Acción';
+    
+    document.getElementById('ap_nc_id').value = ap.nc_id || '';
+    document.getElementById('ap_origen_nc').value = ap.origen_nc || '';
+    document.getElementById('ap_responsable').value = ap.responsable || '';
+    document.getElementById('ap_fecha_compromiso').value = ap.fecha_compromiso || '';
+    document.getElementById('ap_accion_implementar').value = ap.accion_implementar || '';
+    document.getElementById('ap_estado_avance').value = ap.estado_avance || 'Pendiente';
+    document.getElementById('ap_fecha_cierre').value = ap.fecha_cierre || '';
+    
+    btnDeleteActionPlan.style.display = 'inline-block';
+    modalActionPlan.classList.add('active');
+}
+
+actionPlanForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('ap_id').value;
+    
+    const data = {
+        nc_id: document.getElementById('ap_nc_id').value,
+        origen_nc: document.getElementById('ap_origen_nc').value,
+        responsable: document.getElementById('ap_responsable').value,
+        fecha_compromiso: document.getElementById('ap_fecha_compromiso').value,
+        accion_implementar: document.getElementById('ap_accion_implementar').value,
+        estado_avance: document.getElementById('ap_estado_avance').value,
+        fecha_cierre: document.getElementById('ap_fecha_cierre').value
+    };
+    
+    if (!id && currentWorkspaceId) {
+        data.workspace_id = parseInt(currentWorkspaceId);
+    }
+    
+    try {
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${API_ACTION_URL}/${id}` : API_ACTION_URL;
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            modalActionPlan.classList.remove('active');
+            fetchActionPlans();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+});
+
+btnDeleteActionPlan.addEventListener('click', async () => {
+    const id = document.getElementById('ap_id').value;
+    if (!id) return;
+    if (!confirm('¿Seguro que deseas eliminar este Plan de Acción?')) return;
+    
+    try {
+        const res = await fetch(`${API_ACTION_URL}/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            modalActionPlan.classList.remove('active');
+            fetchActionPlans();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+});
