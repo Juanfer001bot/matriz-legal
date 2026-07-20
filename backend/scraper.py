@@ -255,7 +255,7 @@ async def scrape_pdf_jurisdiccion(client, db: Session, url: str, jurisdiccion: s
     return nuevas, resumen
 
 async def scrape_misiones(client, db: Session):
-    return await scrape_pdf_jurisdiccion(client, db, "https://www.boletin.misiones.gov.ar/", "Misiones")
+    return await scrape_pdf_jurisdiccion(client, db, "https://www.boletindigital.misiones.gov.ar/", "Misiones")
 
 async def scrape_corrientes(client, db: Session):
     url = "https://boletinoficial.corrientes.gob.ar/feed"
