@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matriz Legal de Cumplimiento - Bertolo Narganes | Consultoría Ambiental y HSEQ</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script>
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.classList.add('light-mode');
+        }
+    </script>
+</head>
+<body>
+    <div class="background-glow"></div>
+    <header class="header">
+        <div class="header-content">
+            <h1 style="display: flex; align-items: center; gap: 15px;">
+                Matriz Legal de Cumplimiento - Bertolo Narganes 
+                <img src="logo.png" alt="EBY Logo" style="height: 45px; background: white; padding: 2px; border-radius: 4px;">
+            </h1>
+            <p style="color: var(--text-secondary); margin-top: 5px; font-size: 0.95rem;">Monitoreo inteligente de Ambiente, Seguridad, Higiene y Energía</p>
+            
+            <div id="workspaceContainer" style="display: none; margin-top: 15px; margin-bottom: 5px; align-items: center; gap: 10px;">
+                <label style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0;">Equipo activo:</label>
+                <select id="workspaceSelect" style="max-width: 250px; padding: 5px 10px; font-size: 0.9rem;"></select>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn" id="btnNewReq">Nueva Normativa</button>
+                <button class="btn-secondary" id="btnInbox" style="display: none; background-color: var(--accent);">Bandeja de Novedades</button>
+                <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
+                <button class="btn-secondary" id="btnAdmin" style="display: none;" onclick="window.location.href='/admin.html';">Usuarios</button>
+                <button class="btn-secondary" id="btnThemeToggle">☀️ Claro</button>
+                <button class="btn-secondary" onclick="localStorage.removeItem('token'); window.location.href='/login.html';">Cerrar Sesión</button>
+            </div>
+        </div>
+    </header>
+
+        <section class="filters-section glass">
+            <input type="text" id="searchBox" placeholder="Buscar por título, norma o ID...">
+            <select id="filterAmbito">
+                <option value="">Todos los Ámbitos (Temas)</option>
+            </select>
+            <select id="filterEstado">
+                <option value="">Cualquier Estado de Cumplimiento</option>
+                <option value="Cumple">Cumple</option>
+                <option value="No Cumple">No Cumple</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="No Evaluado">No Evaluado</option>
+                <option value="A Revisar">A Revisar (Nuevas)</option>
+            </select>
+        </section>
+
+        <section class="table-container glass">
+            <table id="legalTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nacional</th>
+                        <th>Local</th>
+                        <th>Tipo Norma</th>
+                        <th>Tema</th>
+                        <th>Título</th>
+                        <th>Cumplimiento</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Filas dinámicas -->
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <!-- Modal Form -->
+    <div id="modalForm" class="modal">
+        <div class="modal-content glass" style="max-width: 900px;">
+            <span class="close-btn">&times;</span>
+            <h2 id="modalTitle">Detalle de Normativa</h2>
+            <form id="reqForm">
+                <input type="hidden" id="reqId">
+                
+                <div class="form-section">
+                    <h3>Identificación Básica</h3>
+                    <div class="grid-2">
+                        <div>
+                            <label>Tipo de Norma</label>
+                            <input type="text" id="tipo_norma" required>
+                        </div>
+                        <div>
+                            <label>Número</label>
+                            <input type="text" id="numero">
+                        </div>
+                        <div>
+                            <label>Año / Fecha de Publicación</label>
+                            <input type="text" id="anio_fecha">
+                        </div>
+                        <div>
+                            <label>Jurisdicción Nacional</label>
+                            <input type="text" id="jurisdiccion_nacional">
+                        </div>
+                        <div>
+                            <label>Jurisdicción Local/Provincial</label>
+                            <input type="text" id="jurisdiccion_local">
+                        </div>
+                        <div>
+                            <label>Tema</label>
+                            <input type="text" id="tema">
+                        </div>
+                        <div class="full-width">
+                            <label>Título</label>
+                            <textarea id="titulo" rows="2" required></textarea>
+                        </div>
+                        <div class="full-width">
+                            <label>Breve Descripción</label>
+                            <textarea id="breve_descripcion" rows="3"></textarea>
+                        </div>
+                        <div>
+                            <label>Autoridad de Aplicación</label>
+                            <input type="text" id="autoridad_aplicacion">
+                        </div>
+                        <div>
+                            <label>Estado de Vigencia</label>
+                            <input type="text" id="estado_vigencia">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Auditoría y Cumplimiento</h3>
+                    <div class="grid-2">
+                        <div class="full-width">
+                            <label>Artículo(s) Aplicable(s)</label>
+                            <textarea id="articulos_aplicables" rows="2"></textarea>
+                        </div>
+                        <div class="full-width">
+                            <label>Requisito / Obligación Específica</label>
+                            <textarea id="requisito_obligacion" rows="3"></textarea>
+                        </div>
+                        <div class="full-width">
+                            <label>Evidencia de Cumplimiento</label>
+                            <textarea id="evidencia_cumplimiento" rows="3"></textarea>
+                        </div>
+                        <div>
+                            <label>Estado de Cumplimiento</label>
+                            <select id="estado_cumplimiento">
+                                <option value="Cumple">Cumple</option>
+                                <option value="No Cumple">No Cumple</option>
+                                <option value="Parcial / En Proceso">Parcial / En Proceso</option>
+                                <option value="No Aplica">No Aplica</option>
+                                <option value="A Revisar">A Revisar</option>
+                                <option value="No Evaluado">No Evaluado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Form (Change Password) -->
+    <div class="modal" id="modalPassword">
+        <div class="modal-content glass" style="max-width: 400px;">
+            <span class="close-btn" id="closePasswordModal">&times;</span>
+            <h2 style="margin-top:0">Cambiar Mi Contraseña</h2>
+            <form id="passwordForm" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label>Nueva Contraseña</label>
+                    <input type="text" id="newPassword" required placeholder="Escribe tu nueva contraseña">
+                </div>
+                <button type="submit" class="btn">Actualizar Contraseña</button>
+                <p id="passwordMsg" style="margin-top: 10px; font-weight: 500;"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Inbox -->
+    <div class="modal" id="modalInbox">
+        <div class="modal-content glass" style="max-width: 1000px; max-height: 80vh; overflow-y: auto;">
+            <span class="close-btn" id="closeInboxModal">&times;</span>
+            <h2 style="margin-top:0">Bandeja de Novedades (Scraper)</h2>
+            <p style="margin-bottom: 15px;">Revisa las normativas detectadas por el bot. Apruébalas para completar su clasificación y agregarlas a la matriz, o descártalas.</p>
+            <table style="width: 100%; text-align: left; margin-top: 15px;" id="inboxTable">
+                <thead>
+                    <tr>
+                        <th style="padding-bottom: 10px;">Fecha</th>
+                        <th style="padding-bottom: 10px;">Nacional</th>
+                        <th style="padding-bottom: 10px;">Local</th>
+                        <th style="padding-bottom: 10px;">Tipo</th>
+                        <th style="padding-bottom: 10px;">Título</th>
+                        <th style="padding-bottom: 10px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inboxTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
