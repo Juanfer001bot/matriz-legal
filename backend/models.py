@@ -93,3 +93,33 @@ class WorkspaceIntegration(Base):
 
     workspace = relationship("Workspace")
 
+class MeetingMinute(Base):
+    __tablename__ = "meeting_minutes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"))
+    
+    fecha = Column(String, default="")
+    participantes = Column(Text, default="")
+    temas_tratados = Column(Text, default="")
+    archivo_adjunto = Column(Text, default="")  # Para base64 o link
+
+    workspace = relationship("Workspace")
+
+class Consultation(Base):
+    __tablename__ = "consultations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"))
+    
+    fecha = Column(String, default="")
+    tipo = Column(String, default="Consulta") # Consulta, Sugerencia, Aviso de Riesgo
+    detalle = Column(Text, default="")
+    es_anonimo = Column(Integer, default=0) # 1 = Si, 0 = No
+    autor = Column(String, default="")
+    estado = Column(String, default="Pendiente")
+    analisis_gestor = Column(Text, default="")
+    archivo_adjunto = Column(Text, default="")
+
+    workspace = relationship("Workspace")
+

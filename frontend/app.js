@@ -680,3 +680,320 @@ if (closeIntegrationsModal) {
         modalIntegrations.classList.remove('active');
     });
 }
+
+// --- LOGICA DE CONSULTA Y PARTICIPACION ---
+const btnParticipacion = document.getElementById('btnParticipacion');
+const participacionFilters = document.getElementById('participacionFilters');
+const consultasTableContainer = document.getElementById('consultasTableContainer');
+const minutasTableContainer = document.getElementById('minutasTableContainer');
+
+const btnTabConsultas = document.getElementById('btnTabConsultas');
+const btnTabMinutas = document.getElementById('btnTabMinutas');
+const consultasTableBody = document.getElementById('consultasTableBody');
+const minutasTableBody = document.getElementById('minutasTableBody');
+
+const modalConsulta = document.getElementById('modalConsulta');
+const modalMinuta = document.getElementById('modalMinuta');
+const closeConsultaModal = document.getElementById('closeConsultaModal');
+const closeMinutaModal = document.getElementById('closeMinutaModal');
+
+const consultaForm = document.getElementById('consultaForm');
+const minutaForm = document.getElementById('minutaForm');
+
+let consultas = [];
+let minutas = [];
+
+if (btnParticipacion) {
+    btnParticipacion.addEventListener('click', () => {
+        // Hide others
+        btnMatrizView.style.display = window.currentUserEmail && window.currentUserEmail.startsWith('consultas@') ? 'none' : 'inline-block';
+        if (window.currentUserEmail && !window.currentUserEmail.startsWith('consultas@')) {
+            btnActionPlans.style.display = 'inline-block';
+        }
+        btnParticipacion.style.display = 'none';
+        
+        matrizFilters.style.display = 'none';
+        matrizTableContainer.style.display = 'none';
+        actionPlanFilters.style.display = 'none';
+        actionPlanTableContainer.style.display = 'none';
+        
+        // Show Participacion
+        participacionFilters.style.display = 'flex';
+        btnTabConsultas.click(); // Default tab
+    });
+}
+
+btnTabConsultas.addEventListener('click', () => {
+    btnTabConsultas.style.backgroundColor = 'var(--primary)';
+    btnTabConsultas.style.color = 'white';
+    btnTabMinutas.style.backgroundColor = 'var(--card-bg)';
+    btnTabMinutas.style.color = 'var(--text-color)';
+    
+    consultasTableContainer.style.display = 'block';
+    minutasTableContainer.style.display = 'none';
+    fetchConsultas();
+});
+
+btnTabMinutas.addEventListener('click', () => {
+    btnTabMinutas.style.backgroundColor = 'var(--primary)';
+    btnTabMinutas.style.color = 'white';
+    btnTabConsultas.style.backgroundColor = 'var(--card-bg)';
+    btnTabConsultas.style.color = 'var(--text-color)';
+    
+    minutasTableContainer.style.display = 'block';
+    consultasTableContainer.style.display = 'none';
+    fetchMinutas();
+});
+
+// APIs
+async function fetchConsultas() {
+    if (!currentWorkspaceId) return;
+    try {
+        const res = await fetch(`/api/consultations?workspace_id=${currentWorkspaceId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            consultas = await res.json();
+            renderConsultasTable();
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function fetchMinutas() {
+    if (!currentWorkspaceId) return;
+    try {
+        const res = await fetch(`/api/meeting-minutes?workspace_id=${currentWorkspaceId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            minutas = await res.json();
+            renderMinutasTable();
+        }
+    } catch (e) { console.error(e); }
+}
+
+function renderConsultasTable() {
+    consultasTableBody.innerHTML = '';
+    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
+    
+    consultas.forEach(c => {
+        let adjuntoHtml = c.archivo_adjunto ? `<a href="${c.archivo_adjunto}" target="_blank" style="color: var(--primary);">Ver Adjunto</a>` : '-';
+        let badgeClass = c.estado === 'Resuelto' ? 'cumple' : (c.estado === 'En Análisis' ? 'en-proceso' : 'no-evaluado');
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${c.fecha}</td>
+            <td><strong>${c.tipo}</strong></td>
+            <td>${c.es_anonimo === 1 ? 'Anónimo' : (c.autor || 'Anónimo')}</td>
+            <td><div style="max-width:250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${c.detalle}">${c.detalle}</div></td>
+            <td><span class="badge ${badgeClass}">${c.estado}</span></td>
+            <td>
+                <button class="action-btn" onclick="editConsulta(${c.id})">${isGestor ? 'Gestionar' : 'Ver'}</button>
+            </td>
+        `;
+        consultasTableBody.appendChild(tr);
+    });
+}
+
+function renderMinutasTable() {
+    minutasTableBody.innerHTML = '';
+    minutas.forEach(m => {
+        let adjuntoHtml = m.archivo_adjunto ? `<a href="${m.archivo_adjunto}" target="_blank" style="color: var(--primary);">Ver Adjunto</a>` : '-';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${m.fecha}</td>
+            <td><div style="max-width:200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.participantes}">${m.participantes}</div></td>
+            <td><div style="max-width:250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.temas_tratados}">${m.temas_tratados}</div></td>
+            <td>${adjuntoHtml}</td>
+            <td>
+                <button class="action-btn" onclick="editMinuta(${m.id})">Detalles</button>
+            </td>
+        `;
+        minutasTableBody.appendChild(tr);
+    });
+}
+
+document.getElementById('btnNewConsulta').addEventListener('click', () => {
+    consultaForm.reset();
+    document.getElementById('cons_id').value = '';
+    document.getElementById('modalConsultaTitle').innerText = 'Nueva Consulta / Sugerencia';
+    document.getElementById('btnConsGenActionPlan').style.display = 'none';
+    
+    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
+    document.querySelectorAll('.gestor-only').forEach(el => el.style.display = isGestor ? 'block' : 'none');
+    
+    modalConsulta.classList.add('active');
+});
+
+document.getElementById('btnNewMinuta').addEventListener('click', () => {
+    minutaForm.reset();
+    document.getElementById('min_id').value = '';
+    document.getElementById('modalMinutaTitle').innerText = 'Nueva Minuta de Reunión';
+    document.getElementById('btnMinutaGenActionPlan').style.display = 'none';
+    document.getElementById('btnMinutaPdf').style.display = 'none';
+    modalMinuta.classList.add('active');
+});
+
+closeConsultaModal.addEventListener('click', () => modalConsulta.classList.remove('active'));
+closeMinutaModal.addEventListener('click', () => modalMinuta.classList.remove('active'));
+
+window.editConsulta = (id) => {
+    const c = consultas.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('cons_id').value = c.id;
+    document.getElementById('modalConsultaTitle').innerText = 'Detalle de ' + c.tipo;
+    
+    document.getElementById('cons_fecha').value = c.fecha || '';
+    document.getElementById('cons_tipo').value = c.tipo || 'Consulta';
+    document.getElementById('cons_anonimo').value = c.es_anonimo || 0;
+    document.getElementById('cons_autor').value = c.autor || '';
+    document.getElementById('cons_detalle').value = c.detalle || '';
+    document.getElementById('cons_adjunto').value = c.archivo_adjunto || '';
+    document.getElementById('cons_analisis').value = c.analisis_gestor || '';
+    document.getElementById('cons_estado').value = c.estado || 'Pendiente';
+    
+    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
+    document.querySelectorAll('.gestor-only').forEach(el => el.style.display = isGestor ? 'block' : 'none');
+    
+    if (isGestor) {
+        document.getElementById('btnConsGenActionPlan').style.display = 'inline-block';
+    } else {
+        // Disable fields for generic user if editing
+        document.getElementById('cons_fecha').disabled = true;
+        document.getElementById('cons_detalle').disabled = true;
+    }
+    
+    modalConsulta.classList.add('active');
+};
+
+window.editMinuta = (id) => {
+    const m = minutas.find(x => x.id === id);
+    if (!m) return;
+    document.getElementById('min_id').value = m.id;
+    document.getElementById('modalMinutaTitle').innerText = 'Editar Minuta de Reunión';
+    
+    document.getElementById('min_fecha').value = m.fecha || '';
+    document.getElementById('min_participantes').value = m.participantes || '';
+    document.getElementById('min_temas').value = m.temas_tratados || '';
+    document.getElementById('min_adjunto').value = m.archivo_adjunto || '';
+    
+    document.getElementById('btnMinutaGenActionPlan').style.display = 'inline-block';
+    document.getElementById('btnMinutaPdf').style.display = 'inline-block';
+    
+    modalMinuta.classList.add('active');
+};
+
+// Generar Plan desde Consulta
+document.getElementById('btnConsGenActionPlan').addEventListener('click', () => {
+    modalConsulta.classList.remove('active');
+    btnActionPlans.click();
+    btnNewActionPlan.click();
+    const tipo = document.getElementById('cons_tipo').value;
+    const autor = document.getElementById('cons_autor').value;
+    const detalle = document.getElementById('cons_detalle').value;
+    document.getElementById('ap_origen_nc').value = tipo + " (Participación)";
+    document.getElementById('ap_accion_implementar').value = detalle;
+});
+
+// Generar Plan desde Minuta
+document.getElementById('btnMinutaGenActionPlan').addEventListener('click', () => {
+    modalMinuta.classList.remove('active');
+    btnActionPlans.click();
+    btnNewActionPlan.click();
+    const fecha = document.getElementById('min_fecha').value;
+    const temas = document.getElementById('min_temas').value;
+    document.getElementById('ap_origen_nc').value = "Minuta de Reunión " + fecha;
+    document.getElementById('ap_accion_implementar').value = temas;
+});
+
+// Descargar PDF de Minuta
+document.getElementById('btnMinutaPdf').addEventListener('click', () => {
+    const fecha = document.getElementById('min_fecha').value;
+    const participantes = document.getElementById('min_participantes').value;
+    const temas = document.getElementById('min_temas').value;
+    
+    const element = document.createElement('div');
+    element.innerHTML = `
+        <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333;">
+            <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #005f73; padding-bottom: 10px;">
+                <h1 style="color: #005f73;">MINUTA DE REUNIÓN</h1>
+                <p>Sistema de Gestión HSEQ</p>
+            </div>
+            <p><strong>Fecha de la Reunión:</strong> ${fecha}</p>
+            <p><strong>Participantes:</strong> ${participantes}</p>
+            <div style="margin-top: 20px;">
+                <h3 style="color: #005f73;">Temas Tratados y Acuerdos:</h3>
+                <p style="white-space: pre-wrap; line-height: 1.6;">${temas}</p>
+            </div>
+        </div>
+    `;
+    
+    html2pdf().set({
+        margin: 1,
+        filename: 'Minuta_' + fecha + '.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    }).from(element).save();
+});
+
+// Submits
+consultaForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('cons_id').value;
+    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
+    
+    const data = {
+        fecha: document.getElementById('cons_fecha').value,
+        tipo: document.getElementById('cons_tipo').value,
+        es_anonimo: parseInt(document.getElementById('cons_anonimo').value),
+        autor: document.getElementById('cons_autor').value,
+        detalle: document.getElementById('cons_detalle').value,
+        archivo_adjunto: document.getElementById('cons_adjunto').value,
+    };
+    
+    if (isGestor) {
+        data.analisis_gestor = document.getElementById('cons_analisis').value;
+        data.estado = document.getElementById('cons_estado').value;
+    }
+    
+    if (!id && currentWorkspaceId) data.workspace_id = parseInt(currentWorkspaceId);
+    
+    try {
+        const res = await fetch(id ? `/api/consultations/${id}` : '/api/consultations', {
+            method: id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            modalConsulta.classList.remove('active');
+            fetchConsultas();
+        }
+    } catch(err) { console.error(err); }
+});
+
+minutaForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('min_id').value;
+    
+    const data = {
+        fecha: document.getElementById('min_fecha').value,
+        participantes: document.getElementById('min_participantes').value,
+        temas_tratados: document.getElementById('min_temas').value,
+        archivo_adjunto: document.getElementById('min_adjunto').value
+    };
+    if (!id && currentWorkspaceId) data.workspace_id = parseInt(currentWorkspaceId);
+    
+    try {
+        const res = await fetch(id ? `/api/meeting-minutes/${id}` : '/api/meeting-minutes', {
+            method: id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            modalMinuta.classList.remove('active');
+            fetchMinutas();
+        }
+    } catch(err) { console.error(err); }
+});
+

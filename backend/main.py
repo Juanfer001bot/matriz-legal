@@ -596,6 +596,88 @@ async def kobo_webhook(workspace_id: int, secret: str, request: Request, db: Ses
         
     return {"status": "success", "message": "Inspection passed. No action plans created."}
 
+# --- Modulo Consulta y Participacion ---
+
+@app.get("/api/meeting-minutes")
+def get_meeting_minutes(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    query = db.query(models.MeetingMinute)
+    if workspace_id:
+        if workspace_id not in [w.id for w in current_user.workspaces] and current_user.email != "juan@test.com":
+            raise HTTPException(status_code=403, detail="Not authorized for this workspace")
+        query = query.filter(models.MeetingMinute.workspace_id == workspace_id)
+    return query.all()
+
+@app.post("/api/meeting-minutes", response_model=schemas.MeetingMinuteResponse)
+def create_meeting_minute(minute: schemas.MeetingMinuteCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_minute = models.MeetingMinute(**minute.model_dump())
+    db.add(db_minute)
+    db.commit()
+    db.refresh(db_minute)
+    return db_minute
+
+@app.delete("/api/meeting-minutes/{minute_id}")
+def delete_meeting_minute(minute_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    minute = db.query(models.MeetingMinute).filter(models.MeetingMinute.id == minute_id).first()
+    if minute:
+        db.delete(minute)
+        db.commit()
+    return {"status": "success"}
+
+@app.get("/api/consultations")
+def get_consultations(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    query = db.query(models.Consultation)
+    if workspace_id:
+        if workspace_id not in [w.id for w in current_user.workspaces] and current_user.email != "juan@test.com":
+            # For consultas@test.com, we still allow them if they are in the workspace
+            raise HTTPException(status_code=403, detail="Not authorized for this workspace")
+        query = query.filter(models.Consultation.workspace_id == workspace_id)
+    return query.all()
+
+@app.post("/api/consultations", response_model=schemas.ConsultationResponse)
+def create_consultation(consultation: schemas.ConsultationCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_consultation = models.Consultation(**consultation.model_dump())
+    db.add(db_consultation)
+    db.commit()
+    db.refresh(db_consultation)
+    return db_consultation
+
+@app.put("/api/consultations/{consultation_id}", response_model=schemas.ConsultationResponse)
+def update_consultation(consultation_id: int, consultation: schemas.ConsultationUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_consultation = db.query(models.Consultation).filter(models.Consultation.id == consultation_id).first()
+    if not db_consultation:
+        raise HTTPException(status_code=404, detail="Consultation not found")
+        
+    for key, value in consultation.model_dump(exclude_unset=True).items():
+        setattr(db_consultation, key, value)
+        
+    db.commit()
+    db.refresh(db_consultation)
+    return db_consultation
+
+@app.delete("/api/consultations/{consultation_id}")
+def delete_consultation(consultation_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    consultation = db.query(models.Consultation).filter(models.Consultation.id == consultation_id).first()
+    if consultation:
+        db.delete(consultation)
+        db.commit()
+    return {"status": "success"}
+
+@app.get("/api/bot/migrate-participacion")
+def migrate_participacion(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        models.MeetingMinute.__table__.create(engine)
+    except Exception:
+        pass
+        
+    try:
+        models.Consultation.__table__.create(engine)
+    except Exception:
+        pass
+        
+    return {"status": "success", "message": "Tablas creadas con éxito"}
+
+
 @app.get("/api/bot/migrate-kobo")
 def migrate_kobo(db: Session = Depends(get_db)):
     from sqlalchemy import text

@@ -101,3 +101,43 @@ class ActionPlanResponse(ActionPlanBase):
 
     class Config:
         from_attributes = True
+
+class MeetingMinuteBase(BaseModel):
+    workspace_id: Optional[int] = None
+    fecha: Optional[str] = ""
+    participantes: Optional[str] = ""
+    temas_tratados: Optional[str] = ""
+    archivo_adjunto: Optional[str] = ""
+
+class MeetingMinuteCreate(MeetingMinuteBase):
+    pass
+
+class MeetingMinuteUpdate(MeetingMinuteBase):
+    pass
+
+class MeetingMinuteResponse(MeetingMinuteBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class ConsultationBase(BaseModel):
+    workspace_id: Optional[int] = None
+    fecha: Optional[str] = ""
+    tipo: Optional[str] = "Consulta"
+    detalle: Optional[str] = ""
+    es_anonimo: Optional[int] = 0
+    autor: Optional[str] = ""
+    estado: Optional[str] = "Pendiente"
+    analisis_gestor: Optional[str] = ""
+    archivo_adjunto: Optional[str] = ""
+
+class ConsultationCreate(ConsultationBase):
+    pass
+
+class ConsultationUpdate(ConsultationBase):
+    pass
+
+class ConsultationResponse(ConsultationBase):
+    id: int
+    class Config:
+        from_attributes = True

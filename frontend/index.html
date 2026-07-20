@@ -28,6 +28,7 @@
             </div>
 
             <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn" id="btnParticipacion">Consulta y Participación</button>
                 <button class="btn" id="btnMatrizView" style="display: none;">Ver Matriz Legal</button>
                 <button class="btn" id="btnActionPlans">Planes de Acción</button>
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
@@ -310,6 +311,107 @@
         </div>
     </div>
 
+    
+    <!-- Modal Consulta -->
+    <div id="modalConsulta" class="modal">
+        <div class="modal-content glass" style="max-width: 600px;">
+            <span class="close-btn" id="closeConsultaModal">&times;</span>
+            <h2 id="modalConsultaTitle">Nueva Consulta / Sugerencia</h2>
+            <form id="consultaForm">
+                <input type="hidden" id="cons_id">
+                <div class="form-section">
+                    <div class="grid-2">
+                        <div>
+                            <label>Fecha</label>
+                            <input type="date" id="cons_fecha" required>
+                        </div>
+                        <div>
+                            <label>Tipo</label>
+                            <select id="cons_tipo">
+                                <option value="Consulta">Consulta</option>
+                                <option value="Sugerencia">Sugerencia</option>
+                                <option value="Aviso de Riesgo">Aviso de Riesgo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>¿Es Anónimo?</label>
+                            <select id="cons_anonimo">
+                                <option value="0">No, adjuntar mi nombre</option>
+                                <option value="1">Sí, mantener anonimato</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Nombre del Autor (Opcional)</label>
+                            <input type="text" id="cons_autor">
+                        </div>
+                        <div class="full-width">
+                            <label>Detalle / Descripción</label>
+                            <textarea id="cons_detalle" rows="4" required></textarea>
+                        </div>
+                        <div class="full-width">
+                            <label>Archivo Adjunto (Enlace a Drive, Foto, etc.)</label>
+                            <input type="text" id="cons_adjunto" placeholder="Enlace al documento...">
+                        </div>
+                        
+                        <!-- Campos exclusivos para el Gestor -->
+                        <div class="full-width gestor-only" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                            <label style="color: var(--accent);">Análisis del Gestor HSEQ</label>
+                            <textarea id="cons_analisis" rows="3" placeholder="Respuesta o acciones tomadas..."></textarea>
+                        </div>
+                        <div class="gestor-only">
+                            <label style="color: var(--accent);">Estado</label>
+                            <select id="cons_estado">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En Análisis">En Análisis</option>
+                                <option value="Resuelto">Resuelto</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="button" class="btn" id="btnConsGenActionPlan" style="display: none; background-color: var(--accent); color: white; border: none;">Generar Plan de Acción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Minuta -->
+    <div id="modalMinuta" class="modal">
+        <div class="modal-content glass" style="max-width: 600px;">
+            <span class="close-btn" id="closeMinutaModal">&times;</span>
+            <h2 id="modalMinutaTitle">Nueva Minuta de Reunión</h2>
+            <form id="minutaForm">
+                <input type="hidden" id="min_id">
+                <div class="form-section">
+                    <div class="grid-2">
+                        <div class="full-width">
+                            <label>Fecha de la Reunión</label>
+                            <input type="date" id="min_fecha" required>
+                        </div>
+                        <div class="full-width">
+                            <label>Participantes</label>
+                            <input type="text" id="min_participantes" placeholder="Juan, María, Carlos..." required>
+                        </div>
+                        <div class="full-width">
+                            <label>Temas Tratados / Acuerdos</label>
+                            <textarea id="min_temas" rows="4" required></textarea>
+                        </div>
+                        <div class="full-width">
+                            <label>Archivo Adjunto (Enlace PDF o Acta firmada)</label>
+                            <input type="text" id="min_adjunto" placeholder="https://drive.google.com/...">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions" style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="submit" class="btn-primary">Guardar Minuta</button>
+                    <button type="button" class="btn btn-secondary" id="btnMinutaPdf" style="display: none;">Descargar PDF</button>
+                    <button type="button" class="btn" id="btnMinutaGenActionPlan" style="display: none; background-color: var(--accent); color: white; border: none;">Generar Plan de Acción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal Integraciones -->
     <div class="modal" id="modalIntegrations">
         <div class="modal-content glass" style="max-width: 600px;">
@@ -327,6 +429,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
