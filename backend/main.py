@@ -116,7 +116,8 @@ def create_workspace(workspace: schemas.WorkspaceCreate, db: Session = Depends(g
                 articulos_aplicables=r.articulos_aplicables,
                 requisito_obligacion=r.requisito_obligacion,
                 evidencia_cumplimiento=r.evidencia_cumplimiento,
-                estado_cumplimiento=r.estado_cumplimiento
+                estado_cumplimiento=r.estado_cumplimiento,
+                link_web=r.link_web
             )
             db.add(req_clone)
         db.commit()
@@ -394,6 +395,40 @@ def cleanup_scraper_junk(db: Session = Depends(get_db)):
     deleted_count = db.query(models.LegalRequirement).filter(models.LegalRequirement.tema == "Novedad Scraper").delete()
     db.commit()
     return {"status": "success", "message": f"Se eliminaron {deleted_count} normativas basura de la matriz."}
+
+@app.get("/api/bot/migrate-links")
+def migrate_links(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    import urllib.parse
+    
+    try:
+        db.execute(text("ALTER TABLE legal_requirements ADD COLUMN link_web VARCHAR"))
+        db.commit()
+    except Exception:
+        pass
+    try:
+        db.execute(text("ALTER TABLE scraper_inbox ADD COLUMN link_web VARCHAR"))
+        db.commit()
+    except Exception:
+        pass
+
+    reqs = db.query(models.LegalRequirement).filter((models.LegalRequirement.link_web == None) | (models.LegalRequirement.link_web == "")).all()
+    count = 0
+    for r in reqs:
+        query = ""
+        if r.tipo_norma and r.numero:
+            query = f"{r.tipo_norma} {r.numero}"
+            if r.jurisdiccion_nacional: query += f" {r.jurisdiccion_nacional}"
+            elif r.jurisdiccion_local: query += f" {r.jurisdiccion_local}"
+        elif r.titulo:
+            query = r.titulo
+        
+        if query:
+            r.link_web = "https://www.google.com/search?q=" + urllib.parse.quote(query)
+            count += 1
+            
+    db.commit()
+    return {"status": "success", "message": f"Migración completa. Se autocompletaron {count} enlaces."}
 
 # Servir Frontend
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

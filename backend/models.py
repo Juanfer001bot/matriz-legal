@@ -48,6 +48,7 @@ class LegalRequirement(Base):
     requisito_obligacion = Column(Text, default="")
     evidencia_cumplimiento = Column(Text, default="")
     estado_cumplimiento = Column(String, default="")
+    link_web = Column(String, nullable=True)
 
     workspace = relationship("Workspace", back_populates="requirements")
 
@@ -62,4 +63,5 @@ class ScraperInbox(Base):
     tipo_norma = Column(String, default="")
     titulo = Column(Text, default="")
     autoridad_aplicacion = Column(String, default="")
+    link_web = Column(String, nullable=True)
 

@@ -147,6 +147,8 @@ filterEstado.addEventListener('change', renderTable);
 btnNewReq.addEventListener('click', () => {
     reqForm.reset();
     document.getElementById('reqId').value = '';
+    const linkWebBtn = document.getElementById('linkWebBtn');
+    if (linkWebBtn) linkWebBtn.style.display = 'none';
     document.getElementById('modalTitle').innerText = 'Nueva Normativa';
     modal.classList.add('active');
 });
@@ -181,7 +183,8 @@ reqForm.addEventListener('submit', async (e) => {
         articulos_aplicables: document.getElementById('articulos_aplicables').value,
         requisito_obligacion: document.getElementById('requisito_obligacion').value,
         evidencia_cumplimiento: document.getElementById('evidencia_cumplimiento').value,
-        estado_cumplimiento: document.getElementById('estado_cumplimiento').value
+        estado_cumplimiento: document.getElementById('estado_cumplimiento').value,
+        link_web: document.getElementById('link_web') ? document.getElementById('link_web').value : ''
     };
     
     const inbox_id_input = document.getElementById('inbox_id');
@@ -324,6 +327,16 @@ function editRequirement(id) {
         const el = document.getElementById(key);
         if (el) el.value = req[key] || '';
     });
+    
+    const linkWebBtn = document.getElementById('linkWebBtn');
+    if (linkWebBtn) {
+        if (req.link_web) {
+            linkWebBtn.href = req.link_web;
+            linkWebBtn.style.display = 'inline-flex';
+        } else {
+            linkWebBtn.style.display = 'none';
+        }
+    }
     
     modal.classList.add('active');
 }

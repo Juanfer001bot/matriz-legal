@@ -52,6 +52,7 @@ class LegalRequirementBase(BaseModel):
     requisito_obligacion: Optional[str] = ""
     evidencia_cumplimiento: Optional[str] = ""
     estado_cumplimiento: Optional[str] = ""
+    link_web: Optional[str] = ""
 
 class LegalRequirementCreate(LegalRequirementBase):
     inbox_id: Optional[int] = None
@@ -73,6 +74,7 @@ class ScraperInboxResponse(BaseModel):
     tipo_norma: str
     titulo: str
     autoridad_aplicacion: str
+    link_web: Optional[str] = ""
 
     class Config:
         from_attributes = True
