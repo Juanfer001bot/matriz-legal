@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buzón de Consultas y Sugerencias</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0077b6;
+            --bg-color: #0b132b;
+            --card-bg: rgba(28, 37, 65, 0.95);
+            --text-color: #ffffff;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --success: #00b4d8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--success);
+            margin-top: 0;
+        }
+
+        p.subtitle {
+            text-align: center;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #ccc;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #0096c7;
+        }
+
+        #successMessage {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(0, 180, 216, 0.1);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+            color: var(--success);
+            margin-top: 20px;
+        }
+        
+        #errorMsg {
+            color: #ff4d4d;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="formContainer">
+        <h1>Buzón de Participación</h1>
+        <p class="subtitle">Tus consultas, sugerencias y avisos de riesgo nos ayudan a mejorar.</p>
+        
+        <div id="errorMsg"></div>
+
+        <form id="buzonForm">
+            <div class="form-group">
+                <label>Tipo de Mensaje</label>
+                <select id="tipo" required>
+                    <option value="Consulta">Consulta / Duda</option>
+                    <option value="Sugerencia">Sugerencia de Mejora</option>
+                    <option value="Aviso de Riesgo">Aviso de Riesgo / Incidente</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>¿Deseas que sea anónimo?</label>
+                <select id="es_anonimo" onchange="toggleAutor()">
+                    <option value="0">No, deseo dar mi nombre</option>
+                    <option value="1">Sí, enviar de forma anónima</option>
+                </select>
+            </div>
+            
+            <div class="form-group" id="autorGroup">
+                <label>Tu Nombre o Sector (Opcional)</label>
+                <input type="text" id="autor" placeholder="Ej: Juan de Mantenimiento">
+            </div>
+            
+            <div class="form-group">
+                <label>Detalle del Mensaje</label>
+                <textarea id="detalle" rows="4" required placeholder="Escribe aquí los detalles..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Enlace a Archivo Adjunto (Opcional)</label>
+                <input type="url" id="archivo_adjunto" placeholder="Enlace a Google Drive, Foto, etc.">
+            </div>
+            
+            <button type="submit" id="btnSubmit">Enviar Mensaje</button>
+        </form>
+        
+        <div id="successMessage">
+            <h3>¡Gracias por tu aporte!</h3>
+            <p>Tu mensaje ha sido enviado exitosamente al equipo de gestión.</p>
+            <button type="button" onclick="window.location.reload()" style="background-color: transparent; border: 1px solid var(--success); color: var(--success);">Enviar otro mensaje</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleAutor() {
+            const anonimo = document.getElementById('es_anonimo').value;
+            const autorGroup = document.getElementById('autorGroup');
+            if (anonimo === "1") {
+                autorGroup.style.display = 'none';
+                document.getElementById('autor').value = '';
+            } else {
+                autorGroup.style.display = 'block';
+            }
+        }
+
+        document.getElementById('buzonForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnSubmit = document.getElementById('btnSubmit');
+            const errorMsg = document.getElementById('errorMsg');
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Enviando...';
+            errorMsg.style.display = 'none';
+            
+            // Get workspace_id from URL query string
+            const urlParams = new URLSearchParams(window.location.search);
+            const workspaceId = urlParams.get('w');
+            
+            if (!workspaceId) {
+                errorMsg.textContent = 'Error: Enlace inválido. No se ha especificado un equipo de trabajo (?w=X). Comunícate con tu administrador.';
+                errorMsg.style.display = 'block';
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Enviar Mensaje';
+                return;
+            }
+
+            const today = new Date();
+            const dateString = today.toISOString().split('T')[0];
+            
+            const data = {
+                workspace_id: parseInt(workspaceId),
+                fecha: dateString,
+                tipo: document.getElementById('tipo').value,
+                es_anonimo: parseInt(document.getElementById('es_anonimo').value),
+                autor: document.getElementById('autor').value,
+                detalle: document.getElementById('detalle').value,
+                archivo_adjunto: document.getElementById('archivo_adjunto').value,
+                estado: 'Pendiente',
+                analisis_gestor: ''
+            };
+            
+            try {
+                const response = await fetch('/api/public/consultations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    document.getElementById('buzonForm').style.display = 'none';
+                    document.getElementById('successMessage').style.display = 'block';
+                } else {
+                    errorMsg.textContent = 'Ocurrió un error al enviar el mensaje. Inténtalo de nuevo.';
+                    errorMsg.style.display = 'block';
+                    btnSubmit.disabled = false;
+                    btnSubmit.textContent = 'Enviar Mensaje';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Error de conexión. Revisa tu internet e inténtalo de nuevo.';
+                errorMsg.style.display = 'block';
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Enviar Mensaje';
+            }
+        });
+    </script>
+</body>
+</html>

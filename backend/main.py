@@ -641,6 +641,14 @@ def create_consultation(consultation: schemas.ConsultationCreate, db: Session = 
     db.refresh(db_consultation)
     return db_consultation
 
+@app.post("/api/public/consultations", response_model=schemas.ConsultationResponse)
+def create_public_consultation(consultation: schemas.ConsultationCreate, db: Session = Depends(get_db)):
+    db_consultation = models.Consultation(**consultation.model_dump())
+    db.add(db_consultation)
+    db.commit()
+    db.refresh(db_consultation)
+    return db_consultation
+
 @app.put("/api/consultations/{consultation_id}", response_model=schemas.ConsultationResponse)
 def update_consultation(consultation_id: int, consultation: schemas.ConsultationUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_consultation = db.query(models.Consultation).filter(models.Consultation.id == consultation_id).first()

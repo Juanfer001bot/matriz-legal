@@ -117,9 +117,12 @@
         </section>
 
         <section class="table-container glass" id="consultasTableContainer" style="display: none;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center;">
                 <h2 style="margin: 0; font-size: 1.2rem;">Consultas, Sugerencias y Avisos de Riesgo</h2>
-                <button class="btn-primary" id="btnNewConsulta">NUEVA CONSULTA</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-primary" id="btnCopyBuzonLink" style="background-color: #00b4d8; color: white;">📋 Copiar Enlace Público</button>
+                    <button class="btn-primary" id="btnNewConsulta">NUEVA CONSULTA</button>
+                </div>
             </div>
             <table id="consultasTable">
                 <thead>

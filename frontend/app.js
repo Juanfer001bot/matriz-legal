@@ -68,13 +68,6 @@ async function fetchMe() {
         if (res.ok) {
             const user = await res.json();
             window.currentUserEmail = user.email;
-            
-            if (user.email.startsWith('consultas@')) {
-                const btnPart = document.getElementById('btnParticipacion');
-                if (btnPart) {
-                    setTimeout(() => btnPart.click(), 100);
-                }
-            }
 
             currentUserId = user.id;
             if (user.email === 'juan@test.com') {
@@ -783,7 +776,7 @@ async function fetchMinutas() {
 
 function renderConsultasTable() {
     consultasTableBody.innerHTML = '';
-    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
+    const isGestor = true;
     
     consultas.forEach(c => {
         let adjuntoHtml = c.archivo_adjunto ? `<a href="${c.archivo_adjunto}" target="_blank" style="color: var(--primary);">Ver Adjunto</a>` : '-';
@@ -797,7 +790,7 @@ function renderConsultasTable() {
             <td><div style="max-width:250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${c.detalle}">${c.detalle}</div></td>
             <td><span class="badge ${badgeClass}">${c.estado}</span></td>
             <td>
-                <button class="action-btn" onclick="editConsulta(${c.id})">${isGestor ? 'Gestionar' : 'Ver'}</button>
+                <button class="action-btn" onclick="editConsulta(${c.id})">Gestionar</button>
             </td>
         `;
         consultasTableBody.appendChild(tr);
@@ -828,8 +821,8 @@ document.getElementById('btnNewConsulta').addEventListener('click', () => {
     document.getElementById('modalConsultaTitle').innerText = 'Nueva Consulta / Sugerencia';
     document.getElementById('btnConsGenActionPlan').style.display = 'none';
     
-    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
-    document.querySelectorAll('.gestor-only').forEach(el => el.style.display = isGestor ? 'block' : 'none');
+    const isGestor = true;
+    document.querySelectorAll('.gestor-only').forEach(el => el.style.display = 'block');
     
     modalConsulta.classList.add('active');
 });
@@ -846,6 +839,22 @@ document.getElementById('btnNewMinuta').addEventListener('click', () => {
 closeConsultaModal.addEventListener('click', () => modalConsulta.classList.remove('active'));
 closeMinutaModal.addEventListener('click', () => modalMinuta.classList.remove('active'));
 
+const btnCopyBuzonLink = document.getElementById('btnCopyBuzonLink');
+if (btnCopyBuzonLink) {
+    btnCopyBuzonLink.addEventListener('click', () => {
+        if (!currentWorkspaceId) {
+            alert('Selecciona un equipo de trabajo primero.');
+            return;
+        }
+        const link = window.location.origin + '/buzon.html?w=' + currentWorkspaceId;
+        navigator.clipboard.writeText(link).then(() => {
+            alert('¡Enlace copiado al portapapeles!\n' + link);
+        }).catch(() => {
+            alert('Enlace del Buzón (Cópialo manualmente):\n' + link);
+        });
+    });
+}
+
 window.editConsulta = (id) => {
     const c = consultas.find(x => x.id === id);
     if (!c) return;
@@ -861,16 +870,12 @@ window.editConsulta = (id) => {
     document.getElementById('cons_analisis').value = c.analisis_gestor || '';
     document.getElementById('cons_estado').value = c.estado || 'Pendiente';
     
-    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
-    document.querySelectorAll('.gestor-only').forEach(el => el.style.display = isGestor ? 'block' : 'none');
+    document.querySelectorAll('.gestor-only').forEach(el => el.style.display = 'block');
+    document.getElementById('btnConsGenActionPlan').style.display = 'inline-block';
     
-    if (isGestor) {
-        document.getElementById('btnConsGenActionPlan').style.display = 'inline-block';
-    } else {
-        // Disable fields for generic user if editing
-        document.getElementById('cons_fecha').disabled = true;
-        document.getElementById('cons_detalle').disabled = true;
-    }
+    // Enable fields
+    document.getElementById('cons_fecha').disabled = false;
+    document.getElementById('cons_detalle').disabled = false;
     
     modalConsulta.classList.add('active');
 };
@@ -950,8 +955,6 @@ document.getElementById('btnMinutaPdf').addEventListener('click', () => {
 consultaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const id = document.getElementById('cons_id').value;
-    const isGestor = !(window.currentUserEmail && window.currentUserEmail.startsWith('consultas@'));
-    
     const data = {
         fecha: document.getElementById('cons_fecha').value,
         tipo: document.getElementById('cons_tipo').value,
@@ -959,12 +962,9 @@ consultaForm.addEventListener('submit', async (e) => {
         autor: document.getElementById('cons_autor').value,
         detalle: document.getElementById('cons_detalle').value,
         archivo_adjunto: document.getElementById('cons_adjunto').value,
+        analisis_gestor: document.getElementById('cons_analisis').value,
+        estado: document.getElementById('cons_estado').value
     };
-    
-    if (isGestor) {
-        data.analisis_gestor = document.getElementById('cons_analisis').value;
-        data.estado = document.getElementById('cons_estado').value;
-    }
     
     if (!id && currentWorkspaceId) data.workspace_id = parseInt(currentWorkspaceId);
     
