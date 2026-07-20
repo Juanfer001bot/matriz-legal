@@ -67,6 +67,15 @@ async function fetchMe() {
         });
         if (res.ok) {
             const user = await res.json();
+            window.currentUserEmail = user.email;
+            
+            if (user.email.startsWith('consultas@')) {
+                const btnPart = document.getElementById('btnParticipacion');
+                if (btnPart) {
+                    setTimeout(() => btnPart.click(), 100);
+                }
+            }
+
             currentUserId = user.id;
             if (user.email === 'juan@test.com') {
                 if (btnAdmin) btnAdmin.style.display = 'inline-block';
