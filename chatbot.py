@@ -1,47 +1,48 @@
 import os
-import google.generativeai as genai
+from datetime import datetime, timedelta
+import jwt
+import bcrypt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from .models import LegalRequirement
+from .database import get_db
+from .models import User
 
-# Configurar API de Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SECRET_KEY = os.getenv("JWT_SECRET", "super-secret-key-12345")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    
-# Usamos el modelo más rápido y eficiente para texto
-model = genai.GenerativeModel('gemini-pro')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
-async def get_chatbot_response(pregunta: str, db: Session) -> str:
-    if not GEMINI_API_KEY:
-        return "⚠️ La Inteligencia Artificial no está configurada. Falta la variable GEMINI_API_KEY en Render."
-    
-    # 1. Recuperar TODAS las normativas de la base de datos para darle contexto a la IA
-    normativas = db.query(LegalRequirement).all()
-    
-    if not normativas:
-        return "Actualmente no tengo ninguna normativa guardada en la base de datos de la Matriz Legal."
-    
-    # 2. Construir el contexto
-    contexto = "Eres un asistente legal experto. Tu tarea es responder preguntas BASÁNDOTE ÚNICAMENTE en la siguiente lista de normativas de la Matriz Legal de la empresa.\n\n"
-    contexto += "--- LISTA DE NORMATIVAS ---\n"
-    
-    for req in normativas:
-        contexto += f"- Norma: {req.tipo_norma}\n"
-        contexto += f"  Título: {req.titulo_tema}\n"
-        contexto += f"  Ámbito: {req.ambito}\n"
-        contexto += f"  Estado: {req.estado_cumplimiento}\n\n"
-        
-    contexto += "--- FIN DE NORMATIVAS ---\n\n"
-    contexto += "Instrucciones estrictas:\n"
-    contexto += "1. Responde solo con información que esté en la lista anterior.\n"
-    contexto += "2. Si la pregunta no se puede responder con la lista, di: 'No encontré información sobre eso en la Matriz Legal actual.'\n"
-    contexto += f"3. La pregunta del usuario es: {pregunta}\n"
-    
-    # 3. Llamar a Gemini
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def get_password_hash(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
-        response = model.generate_content(contexto)
-        return response.text
-    except Exception as e:
-        print(f"Error con Gemini API: {e}")
-        return "Lo siento, hubo un error al conectar con mi cerebro artificial. Intenta de nuevo más tarde."
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except jwt.InvalidTokenError:
+        raise credentials_exception
+        
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is None:
+        raise credentials_exception
+    return user
