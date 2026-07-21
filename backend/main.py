@@ -681,6 +681,44 @@ def delete_consultation(consultation_id: int, db: Session = Depends(get_db), cur
         db.commit()
     return {"status": "success"}
 
+@app.get("/api/incidents")
+def get_incidents(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    query = db.query(models.IncidentReport)
+    if workspace_id:
+        if workspace_id not in [w.id for w in current_user.workspaces] and current_user.email != "juan@test.com":
+            raise HTTPException(status_code=403, detail="Not authorized for this workspace")
+        query = query.filter(models.IncidentReport.workspace_id == workspace_id)
+    return query.all()
+
+@app.post("/api/incidents", response_model=schemas.IncidentReportResponse)
+def create_incident(incident: schemas.IncidentReportCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_incident = models.IncidentReport(**incident.model_dump())
+    db.add(db_incident)
+    db.commit()
+    db.refresh(db_incident)
+    return db_incident
+
+@app.put("/api/incidents/{incident_id}", response_model=schemas.IncidentReportResponse)
+def update_incident(incident_id: int, incident: schemas.IncidentReportUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_incident = db.query(models.IncidentReport).filter(models.IncidentReport.id == incident_id).first()
+    if not db_incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+        
+    for key, value in incident.model_dump(exclude_unset=True).items():
+        setattr(db_incident, key, value)
+        
+    db.commit()
+    db.refresh(db_incident)
+    return db_incident
+
+@app.delete("/api/incidents/{incident_id}")
+def delete_incident(incident_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    incident = db.query(models.IncidentReport).filter(models.IncidentReport.id == incident_id).first()
+    if incident:
+        db.delete(incident)
+        db.commit()
+    return {"status": "success"}
+
 @app.get("/api/bot/migrate-participacion")
 def migrate_participacion(db: Session = Depends(get_db)):
     from sqlalchemy import text
@@ -691,6 +729,11 @@ def migrate_participacion(db: Session = Depends(get_db)):
         
     try:
         models.Consultation.__table__.create(engine)
+    except Exception:
+        pass
+        
+    try:
+        models.IncidentReport.__table__.create(engine)
     except Exception:
         pass
         

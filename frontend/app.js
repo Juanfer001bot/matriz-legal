@@ -1057,3 +1057,300 @@ minutaForm.addEventListener('submit', async (e) => {
     } catch(err) { console.error(err); }
 });
 
+// ==========================================
+// MÓDULO DE INVESTIGACIÓN DE INCIDENTES
+// ==========================================
+let incidents = [];
+const btnIncidentes = document.getElementById('btnIncidentes');
+const incidentsTableContainer = document.getElementById('incidentsTableContainer');
+const incidentsTableBody = document.getElementById('incidentsTableBody');
+const modalIncident = document.getElementById('modalIncident');
+const closeIncidentModal = document.getElementById('closeIncidentModal');
+const incidentForm = document.getElementById('incidentForm');
+const btnNewIncident = document.getElementById('btnNewIncident');
+const btnExportIncidentPDF = document.getElementById('btnExportIncidentPDF');
+
+// Hide other sections when clicking incidentes
+if (btnIncidentes) {
+    btnIncidentes.addEventListener('click', () => {
+        document.getElementById('btnMatrizView').style.display = 'inline-block';
+        document.getElementById('btnActionPlans').style.display = 'inline-block';
+        if (document.getElementById('btnParticipacion')) document.getElementById('btnParticipacion').style.display = 'inline-block';
+        btnIncidentes.style.display = 'none';
+
+        if (typeof matrizFilters !== 'undefined') matrizFilters.style.display = 'none';
+        if (typeof matrizTableContainer !== 'undefined') matrizTableContainer.style.display = 'none';
+        if (typeof actionPlanFilters !== 'undefined') actionPlanFilters.style.display = 'none';
+        if (typeof actionPlanTableContainer !== 'undefined') actionPlanTableContainer.style.display = 'none';
+        if (typeof participacionFilters !== 'undefined') participacionFilters.style.display = 'none';
+        if (document.getElementById('consultasTableContainer')) document.getElementById('consultasTableContainer').style.display = 'none';
+        if (document.getElementById('minutasTableContainer')) document.getElementById('minutasTableContainer').style.display = 'none';
+
+        incidentsTableContainer.style.display = 'block';
+        fetchIncidents();
+    });
+}
+
+// Ensure other tabs hide the incidents container
+['btnMatrizView', 'btnActionPlans', 'btnParticipacion'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+        btn.addEventListener('click', () => {
+            if (incidentsTableContainer) incidentsTableContainer.style.display = 'none';
+            if (btnIncidentes) btnIncidentes.style.display = 'inline-block';
+        });
+    }
+});
+
+// Modal Logic
+if (btnNewIncident) {
+    btnNewIncident.addEventListener('click', () => {
+        incidentForm.reset();
+        document.getElementById('inc_id').value = '';
+        btnExportIncidentPDF.style.display = 'none';
+        
+        // Hide all conditional modules
+        document.querySelectorAll('.inc-module').forEach(el => el.style.display = 'none');
+        
+        modalIncident.classList.add('active');
+    });
+}
+if (closeIncidentModal) closeIncidentModal.addEventListener('click', () => modalIncident.classList.remove('active'));
+
+// ISO Modules Toggle Logic
+document.querySelectorAll('.inc-class-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+        const val = cb.value;
+        const checked = cb.checked;
+        if (val === 'Seguridad y Salud') document.getElementById('mod_45001').style.display = checked ? 'block' : 'none';
+        if (val === 'Seguridad Vial') document.getElementById('mod_39001').style.display = checked ? 'block' : 'none';
+        if (val === 'Medio Ambiente') document.getElementById('mod_14001').style.display = checked ? 'block' : 'none';
+        if (val === 'Energía') document.getElementById('mod_50001').style.display = checked ? 'block' : 'none';
+        if (val === 'Calidad') document.getElementById('mod_9001').style.display = checked ? 'block' : 'none';
+    });
+});
+
+async function fetchIncidents() {
+    try {
+        const url = currentWorkspaceId ? `/api/incidents?workspace_id=${currentWorkspaceId}` : '/api/incidents';
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+            incidents = await res.json();
+            renderIncidentsTable();
+        }
+    } catch (err) { console.error(err); }
+}
+
+function renderIncidentsTable() {
+    if (!incidentsTableBody) return;
+    incidentsTableBody.innerHTML = '';
+    
+    if (incidents.length === 0) {
+        incidentsTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay incidentes registrados.</td></tr>';
+        return;
+    }
+    
+    incidents.forEach(inc => {
+        const tr = document.createElement('tr');
+        
+        let clasesList = '';
+        try {
+            const arr = JSON.parse(inc.clasificacion || '[]');
+            clasesList = arr.join(', ');
+        } catch(e) {}
+        
+        tr.innerHTML = `
+            <td>#${inc.id}</td>
+            <td>${inc.fecha_evento.replace('T', ' ')}</td>
+            <td>${inc.sector}</td>
+            <td>${clasesList}</td>
+            <td>${inc.reportador}</td>
+            <td>
+                <button class="action-btn" onclick="editIncident(${inc.id})" style="background-color: var(--primary);">Ver / Editar</button>
+                <button class="action-btn" onclick="deleteIncident(${inc.id})" style="background-color: #ff4d4d;">Eliminar</button>
+            </td>
+        `;
+        incidentsTableBody.appendChild(tr);
+    });
+}
+
+window.editIncident = (id) => {
+    const inc = incidents.find(x => x.id === id);
+    if (!inc) return;
+    
+    incidentForm.reset();
+    document.querySelectorAll('.inc-module').forEach(el => el.style.display = 'none');
+    
+    document.getElementById('inc_id').value = inc.id;
+    document.getElementById('inc_fecha_reporte').value = inc.fecha_reporte;
+    document.getElementById('inc_fecha_evento').value = inc.fecha_evento;
+    document.getElementById('inc_ubicacion').value = inc.ubicacion;
+    document.getElementById('inc_sector').value = inc.sector;
+    document.getElementById('inc_reportador').value = inc.reportador;
+    document.getElementById('inc_condiciones_entorno').value = inc.condiciones_entorno;
+    
+    document.getElementById('inc_relato').value = inc.relato;
+    document.getElementById('inc_testigos').value = inc.testigos;
+    document.getElementById('inc_evidencia').value = inc.evidencia;
+    
+    document.getElementById('inc_contencion').value = inc.medida_contencion;
+    document.getElementById('inc_cont_resp').value = inc.responsable_contencion;
+    document.getElementById('inc_cont_fecha').value = inc.fecha_contencion;
+    
+    document.getElementById('inc_acr_metodologia').value = inc.metodologia_acr || '5 Porqués';
+    document.getElementById('inc_acr_detalle').value = inc.detalle_acr;
+    
+    try {
+        const classArr = JSON.parse(inc.clasificacion || '[]');
+        document.querySelectorAll('.inc-class-cb').forEach(cb => {
+            if (classArr.includes(cb.value)) {
+                cb.checked = true;
+                cb.dispatchEvent(new Event('change'));
+            }
+        });
+    } catch(e) {}
+    
+    try {
+        const datos = JSON.parse(inc.datos_especificos || '{}');
+        Object.keys(datos).forEach(key => {
+            const el = document.getElementById(key);
+            if (el) el.value = datos[key];
+        });
+    } catch(e) {}
+    
+    try {
+        const causas = JSON.parse(inc.causas_raiz || '{}');
+        document.getElementById('inc_causa_personal').value = causas.personal || '';
+        document.getElementById('inc_causa_trabajo').value = causas.trabajo || '';
+        document.getElementById('inc_causa_equipos').value = causas.equipos || '';
+        document.getElementById('inc_causa_entorno').value = causas.entorno || '';
+        document.getElementById('inc_causa_gestion').value = causas.gestion || '';
+    } catch(e) {}
+    
+    try {
+        const reqUpdate = JSON.parse(inc.requiere_actualizacion || '{}');
+        document.querySelectorAll('.inc-update-cb').forEach(cb => {
+            if (reqUpdate.matrices && reqUpdate.matrices.includes(cb.value)) cb.checked = true;
+        });
+        document.getElementById('inc_req_procedimientos').checked = !!reqUpdate.procedimientos;
+        document.getElementById('inc_req_entrenamiento').checked = !!reqUpdate.entrenamiento;
+    } catch(e) {}
+    
+    btnExportIncidentPDF.style.display = 'inline-block';
+    modalIncident.classList.add('active');
+};
+
+window.deleteIncident = async (id) => {
+    if(!confirm('¿Seguro que deseas eliminar esta investigación?')) return;
+    try {
+        const res = await fetch('/api/incidents/' + id, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if(res.ok) fetchIncidents();
+    } catch(err) { console.error(err); }
+};
+
+if (incidentForm) {
+    incidentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const classArr = Array.from(document.querySelectorAll('.inc-class-cb:checked')).map(cb => cb.value);
+        
+        const datos_especificos = {};
+        document.querySelectorAll('.inc-module').forEach(mod => {
+            if (mod.style.display === 'block') {
+                mod.querySelectorAll('input, select, textarea').forEach(el => {
+                    if (el.id) datos_especificos[el.id] = el.value;
+                });
+            }
+        });
+        
+        const causas_raiz = {
+            personal: document.getElementById('inc_causa_personal').value,
+            trabajo: document.getElementById('inc_causa_trabajo').value,
+            equipos: document.getElementById('inc_causa_equipos').value,
+            entorno: document.getElementById('inc_causa_entorno').value,
+            gestion: document.getElementById('inc_causa_gestion').value
+        };
+        
+        const reqUpdate = {
+            matrices: Array.from(document.querySelectorAll('.inc-update-cb:checked')).map(cb => cb.value),
+            procedimientos: document.getElementById('inc_req_procedimientos').checked,
+            entrenamiento: document.getElementById('inc_req_entrenamiento').checked
+        };
+        
+        const data = {
+            fecha_reporte: document.getElementById('inc_fecha_reporte').value,
+            fecha_evento: document.getElementById('inc_fecha_evento').value,
+            ubicacion: document.getElementById('inc_ubicacion').value,
+            sector: document.getElementById('inc_sector').value,
+            reportador: document.getElementById('inc_reportador').value,
+            condiciones_entorno: document.getElementById('inc_condiciones_entorno').value,
+            clasificacion: JSON.stringify(classArr),
+            
+            relato: document.getElementById('inc_relato').value,
+            testigos: document.getElementById('inc_testigos').value,
+            evidencia: document.getElementById('inc_evidencia').value,
+            
+            datos_especificos: JSON.stringify(datos_especificos),
+            
+            medida_contencion: document.getElementById('inc_contencion').value,
+            responsable_contencion: document.getElementById('inc_cont_resp').value,
+            fecha_contencion: document.getElementById('inc_cont_fecha').value,
+            
+            metodologia_acr: document.getElementById('inc_acr_metodologia').value,
+            detalle_acr: document.getElementById('inc_acr_detalle').value,
+            causas_raiz: JSON.stringify(causas_raiz),
+            requiere_actualizacion: JSON.stringify(reqUpdate)
+        };
+        
+        const id = document.getElementById('inc_id').value;
+        if (!id && currentWorkspaceId) data.workspace_id = parseInt(currentWorkspaceId);
+        
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? '/api/incidents/' + id : '/api/incidents';
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+            if (res.ok) {
+                modalIncident.classList.remove('active');
+                fetchIncidents();
+                if (!id) {
+                    alert('Investigación guardada. Recuerda ir a "Planes de Acción" para registrar las acciones correctivas con el origen "Incidente".');
+                }
+            } else {
+                alert('Error al guardar investigación');
+            }
+        } catch(err) { console.error(err); }
+    });
+}
+
+// PDF Export Logic
+if (btnExportIncidentPDF) {
+    btnExportIncidentPDF.addEventListener('click', () => {
+        const id = document.getElementById('inc_id').value;
+        const element = document.querySelector('#modalIncident .modal-content');
+        
+        // Clone for PDF to avoid messing up the UI
+        const clone = element.cloneNode(true);
+        clone.querySelector('.close-btn').remove();
+        clone.querySelector('#btnExportIncidentPDF').remove();
+        clone.querySelector('button[type="submit"]').remove();
+        
+        const opt = {
+            margin:       10,
+            filename:     `Investigacion_Incidente_${id || 'Nuevo'}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        html2pdf().set(opt).from(clone).save();
+    });
+}
+
+

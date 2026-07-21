@@ -79,6 +79,39 @@ class ScraperInboxResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class IncidentReportBase(BaseModel):
+    workspace_id: Optional[int] = None
+    fecha_reporte: Optional[str] = ""
+    fecha_evento: Optional[str] = ""
+    ubicacion: Optional[str] = ""
+    sector: Optional[str] = ""
+    reportador: Optional[str] = ""
+    clasificacion: Optional[str] = "" 
+    condiciones_entorno: Optional[str] = ""
+    relato: Optional[str] = ""
+    testigos: Optional[str] = ""
+    evidencia: Optional[str] = ""
+    datos_especificos: Optional[str] = "{}"
+    medida_contencion: Optional[str] = ""
+    responsable_contencion: Optional[str] = ""
+    fecha_contencion: Optional[str] = ""
+    metodologia_acr: Optional[str] = ""
+    detalle_acr: Optional[str] = ""
+    causas_raiz: Optional[str] = "{}"
+    requiere_actualizacion: Optional[str] = "{}"
+
+class IncidentReportCreate(IncidentReportBase):
+    pass
+
+class IncidentReportUpdate(IncidentReportBase):
+    pass
+
+class IncidentReportResponse(IncidentReportBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
 class BulkDeleteRequest(BaseModel):
     item_ids: List[int]
 

@@ -123,3 +123,40 @@ class Consultation(Base):
 
     workspace = relationship("Workspace")
 
+class IncidentReport(Base):
+    __tablename__ = "incident_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"))
+    
+    # 1. Datos Generales
+    fecha_reporte = Column(String, default="")
+    fecha_evento = Column(String, default="")
+    ubicacion = Column(String, default="")
+    sector = Column(String, default="")
+    reportador = Column(String, default="")
+    clasificacion = Column(String, default="") # JSON list string of selected categories
+    condiciones_entorno = Column(Text, default="")
+    
+    # 2. Descripción
+    relato = Column(Text, default="")
+    testigos = Column(Text, default="")
+    evidencia = Column(Text, default="")
+    
+    # 3. Módulos Condicionales ISO (Stored as JSON string)
+    datos_especificos = Column(Text, default="{}")
+    
+    # 4. Corrección Inmediata
+    medida_contencion = Column(Text, default="")
+    responsable_contencion = Column(String, default="")
+    fecha_contencion = Column(String, default="")
+    
+    # 5. ACR
+    metodologia_acr = Column(String, default="")
+    detalle_acr = Column(Text, default="")
+    causas_raiz = Column(Text, default="{}") # JSON of personal, trabajo, equipos, entorno, gestion
+    
+    # 7. Gestión de Cambio
+    requiere_actualizacion = Column(Text, default="{}") # JSON of checkboxes
+    
+    workspace = relationship("Workspace")

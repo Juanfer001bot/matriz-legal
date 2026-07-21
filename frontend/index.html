@@ -31,6 +31,7 @@
                 <button class="btn" id="btnParticipacion">Consulta y Participación</button>
                 <button class="btn" id="btnMatrizView" style="display: none;">Ver Matriz Legal</button>
                 <button class="btn" id="btnActionPlans">Planes de Acción</button>
+                <button class="btn" id="btnIncidentes" style="background-color: #f77f00; color: white;">Investigación Incidentes</button>
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
                 <button class="btn-secondary" id="btnInbox" style="display: none; background-color: var(--accent);">Bandeja de Novedades</button>
                 <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
@@ -157,7 +158,29 @@
                 <tbody id="minutasTableBody"></tbody>
             </table>
         </section>
+
+        <!-- Nueva sección para Incidentes -->
+        <section class="table-container glass" id="incidentsTableContainer" style="display: none;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-size: 1.2rem;">Investigación de Incidentes (Calidad, MA, SySO, Energía, Vial)</h2>
+                <button class="btn-primary" id="btnNewIncident" style="background-color: #f77f00;">NUEVO REPORTE</button>
+            </div>
+            <table id="incidentsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha Evento</th>
+                        <th>Sector</th>
+                        <th>Clasificación</th>
+                        <th>Reportador</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="incidentsTableBody"></tbody>
+            </table>
+        </section>
     </div>
+
 
     <!-- Modal Form (Matriz) -->
     <div id="modalForm" class="modal">
@@ -479,6 +502,249 @@
                     <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('koboWebhookUrl').value); alert('Copiado!')">Copiar</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Incidentes -->
+    <div id="modalIncident" class="modal">
+        <div class="modal-content glass" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <span class="close-btn" id="closeIncidentModal">&times;</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Investigación de Incidente</h2>
+                <button type="button" class="btn-secondary" id="btnExportIncidentPDF" style="display: none; background-color: var(--accent);">📄 Exportar PDF</button>
+            </div>
+            
+            <form id="incidentForm">
+                <input type="hidden" id="inc_id">
+                
+                <!-- 1. Datos Generales -->
+                <div class="form-section">
+                    <h3>1. Datos Generales del Evento</h3>
+                    <div class="grid-2">
+                        <div>
+                            <label>Fecha y Hora del Reporte</label>
+                            <input type="datetime-local" id="inc_fecha_reporte" required>
+                        </div>
+                        <div>
+                            <label>Fecha y Hora del Evento</label>
+                            <input type="datetime-local" id="inc_fecha_evento" required>
+                        </div>
+                        <div>
+                            <label>Ubicación Exacta / Coordenadas</label>
+                            <input type="text" id="inc_ubicacion" required placeholder="Ej: Planta Baja, Sector Calderas">
+                        </div>
+                        <div>
+                            <label>Sector / Proceso Involucrado</label>
+                            <input type="text" id="inc_sector" required>
+                        </div>
+                        <div>
+                            <label>Persona que Reporta</label>
+                            <input type="text" id="inc_reportador" required>
+                        </div>
+                        <div>
+                            <label>Condiciones del Entorno</label>
+                            <input type="text" id="inc_condiciones_entorno" placeholder="Clima, iluminación, etc.">
+                        </div>
+                    </div>
+                    
+                    <label style="margin-top: 15px;">Clasificación del Evento (Selección Múltiple)</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 5px;">
+                        <label><input type="checkbox" class="inc-class-cb" value="Calidad"> Calidad (ISO 9001)</label>
+                        <label><input type="checkbox" class="inc-class-cb" value="Medio Ambiente"> Medio Ambiente (ISO 14001)</label>
+                        <label><input type="checkbox" class="inc-class-cb" value="Seguridad y Salud"> Seguridad y Salud (ISO 45001)</label>
+                        <label><input type="checkbox" class="inc-class-cb" value="Energía"> Energía (ISO 50001)</label>
+                        <label><input type="checkbox" class="inc-class-cb" value="Seguridad Vial"> Seguridad Vial (ISO 39001)</label>
+                    </div>
+                </div>
+
+                <!-- 2. Descripción del Evento -->
+                <div class="form-section">
+                    <h3>2. Descripción del Evento</h3>
+                    <label>Relato de los Hechos (Qué, cómo, cuándo, dónde y quiénes)</label>
+                    <textarea id="inc_relato" rows="4" required></textarea>
+                    
+                    <div class="grid-2" style="margin-top: 15px;">
+                        <div>
+                            <label>Testigos (Nombres y contacto)</label>
+                            <input type="text" id="inc_testigos">
+                        </div>
+                        <div>
+                            <label>Evidencia Adjunta (Link a fotos/docs)</label>
+                            <input type="url" id="inc_evidencia">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Impacto y Consecuencias (Módulos Condicionales) -->
+                <div id="inc_modules_container">
+                    
+                    <!-- Módulo ISO 45001 -->
+                    <div class="form-section inc-module" id="mod_45001" style="display: none; border-left: 4px solid #f28482;">
+                        <h3 style="color: #f28482;">Módulo ISO 45001 (Seguridad y Salud)</h3>
+                        <div class="grid-2">
+                            <div><label>Persona(s) Afectada(s)</label><input type="text" id="inc_45_personas"></div>
+                            <div><label>Naturaleza de la Lesión</label><input type="text" id="inc_45_lesion"></div>
+                            <div><label>Parte del Cuerpo Afectada</label><input type="text" id="inc_45_cuerpo"></div>
+                            <div>
+                                <label>Tipo de Atención</label>
+                                <select id="inc_45_atencion">
+                                    <option value="">Seleccione...</option>
+                                    <option value="Primeros auxilios">Primeros auxilios</option>
+                                    <option value="Atención médica">Atención médica</option>
+                                    <option value="Derivación a ART/hospital">Derivación a ART/hospital</option>
+                                </select>
+                            </div>
+                            <div><label>Días de Baja Estimados/Reales</label><input type="number" id="inc_45_dias"></div>
+                            <div>
+                                <label>¿Exposición a riesgo psicosocial/ergonómico?</label>
+                                <select id="inc_45_riesgo">
+                                    <option value="No">No</option>
+                                    <option value="Sí">Sí</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Módulo ISO 39001 -->
+                    <div class="form-section inc-module" id="mod_39001" style="display: none; border-left: 4px solid #84a59d;">
+                        <h3 style="color: #84a59d;">Módulo ISO 39001 (Seguridad Vial)</h3>
+                        <div class="grid-2">
+                            <div>
+                                <label>Tipo de Viaje</label>
+                                <select id="inc_39_viaje">
+                                    <option value="">Seleccione...</option>
+                                    <option value="In itinere">In itinere (casa-trabajo)</option>
+                                    <option value="En misión">En misión (durante operaciones)</option>
+                                </select>
+                            </div>
+                            <div><label>Vehículo(s) Involucrado(s)</label><input type="text" id="inc_39_vehiculo"></div>
+                            <div><label>Estado del Vehículo (Mantenimiento)</label><input type="text" id="inc_39_estado"></div>
+                            <div><label>Factor Humano al Volante</label><input type="text" id="inc_39_humano" placeholder="Fatiga, celular, etc."></div>
+                            <div><label>Tipo de Vía</label><input type="text" id="inc_39_via"></div>
+                            <div><label>Dinámica del Siniestro</label><input type="text" id="inc_39_dinamica"></div>
+                        </div>
+                    </div>
+
+                    <!-- Módulo ISO 14001 -->
+                    <div class="form-section inc-module" id="mod_14001" style="display: none; border-left: 4px solid #a8dadc;">
+                        <h3 style="color: #a8dadc;">Módulo ISO 14001 (Medio Ambiente)</h3>
+                        <div class="grid-2">
+                            <div><label>Medio Afectado</label><input type="text" id="inc_14_medio" placeholder="Suelo, agua, aire..."></div>
+                            <div><label>Sustancia Involucrada</label><input type="text" id="inc_14_sustancia"></div>
+                            <div><label>Volumen/Cantidad Estimada</label><input type="text" id="inc_14_volumen"></div>
+                            <div>
+                                <label>¿Se superó un límite legal?</label>
+                                <select id="inc_14_limite">
+                                    <option value="A determinar">A determinar</option>
+                                    <option value="Sí">Sí</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Alcance</label>
+                                <select id="inc_14_alcance">
+                                    <option value="Dentro del sitio">Dentro del sitio</option>
+                                    <option value="Excedió los límites">Excedió los límites de la propiedad</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Módulo ISO 50001 -->
+                    <div class="form-section inc-module" id="mod_50001" style="display: none; border-left: 4px solid #f6bd60;">
+                        <h3 style="color: #f6bd60;">Módulo ISO 50001 (Energía)</h3>
+                        <div class="grid-2">
+                            <div><label>Vector Energético Afectado</label><input type="text" id="inc_50_vector"></div>
+                            <div>
+                                <label>¿Es Uso Significativo (USE)?</label>
+                                <select id="inc_50_use">
+                                    <option value="No">No</option>
+                                    <option value="Sí">Sí</option>
+                                </select>
+                            </div>
+                            <div><label>Desviación respecto a LBE</label><input type="text" id="inc_50_desviacion"></div>
+                            <div><label>Impacto Económico Estimado</label><input type="text" id="inc_50_costo"></div>
+                        </div>
+                    </div>
+
+                    <!-- Módulo ISO 9001 -->
+                    <div class="form-section inc-module" id="mod_9001" style="display: none; border-left: 4px solid #457b9d;">
+                        <h3 style="color: #457b9d;">Módulo ISO 9001 (Calidad)</h3>
+                        <div class="grid-2">
+                            <div><label>Producto / Servicio Afectado</label><input type="text" id="inc_90_producto"></div>
+                            <div><label>Magnitud de la No Conformidad</label><input type="text" id="inc_90_magnitud"></div>
+                            <div><label>Requisito Incumplido</label><input type="text" id="inc_90_requisito"></div>
+                            <div><label>Disposición Inmediata</label><input type="text" id="inc_90_disposicion"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Corrección Inmediata -->
+                <div class="form-section">
+                    <h3>4. Corrección y Acciones Inmediatas</h3>
+                    <label>Medida de Contención (¿Qué se hizo para detener el problema?)</label>
+                    <textarea id="inc_contencion" rows="2"></textarea>
+                    <div class="grid-2" style="margin-top: 10px;">
+                        <div><label>Responsable</label><input type="text" id="inc_cont_resp"></div>
+                        <div><label>Fecha y Hora</label><input type="datetime-local" id="inc_cont_fecha"></div>
+                    </div>
+                </div>
+
+                <!-- 5. ACR -->
+                <div class="form-section">
+                    <h3>5. Análisis de Causa Raíz (ACR)</h3>
+                    <label>Metodología Utilizada</label>
+                    <select id="inc_acr_metodologia">
+                        <option value="5 Porqués">5 Porqués</option>
+                        <option value="Diagrama de Ishikawa">Diagrama de Ishikawa</option>
+                        <option value="Árbol de Fallas">Árbol de Fallas</option>
+                        <option value="Método ICAM">Método ICAM</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                    
+                    <label style="margin-top:10px;">Detalle del Análisis</label>
+                    <textarea id="inc_acr_detalle" rows="4" placeholder="Ej: 1. ¿Por qué ocurrió? Porque... 2. ¿Por qué? ..."></textarea>
+                    
+                    <label style="margin-top: 15px;">Causas Raíz Identificadas</label>
+                    <div class="grid-2">
+                        <div><label>Factores Personales / Humanos</label><input type="text" id="inc_causa_personal"></div>
+                        <div><label>Factores del Trabajo / Organizacionales</label><input type="text" id="inc_causa_trabajo"></div>
+                        <div><label>Fallas en Equipos / Materiales</label><input type="text" id="inc_causa_equipos"></div>
+                        <div><label>Factores del Entorno / Medioambientales</label><input type="text" id="inc_causa_entorno"></div>
+                        <div style="grid-column: 1 / -1;"><label>Fallas en el Sistema de Gestión</label><input type="text" id="inc_causa_gestion"></div>
+                    </div>
+                </div>
+
+                <!-- 6. Acciones Correctivas -->
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0;">6. Acciones Correctivas</h3>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #ccc;"><i>Las acciones deben cargarse en el módulo "Planes de Acción". Al finalizar este reporte y obtener su ID, dirígete allí y crea los planes vinculando el Origen de NC como "Incidente #ID".</i></p>
+                </div>
+
+                <!-- 7. Gestión del Cambio -->
+                <div class="form-section">
+                    <h3>7. Gestión del Cambio y Actualización Documental</h3>
+                    <label>¿El incidente requiere actualizar matrices del sistema integrado?</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-top: 5px;">
+                        <label><input type="checkbox" class="inc-update-cb" value="Matriz 9001"> Matriz de Riesgos (9001)</label>
+                        <label><input type="checkbox" class="inc-update-cb" value="Matriz 14001"> Matriz Aspectos Ambientales (14001)</label>
+                        <label><input type="checkbox" class="inc-update-cb" value="Matriz 50001"> Revisión Energética (50001)</label>
+                        <label><input type="checkbox" class="inc-update-cb" value="Matriz 45001"> Matriz IPERC (45001)</label>
+                        <label><input type="checkbox" class="inc-update-cb" value="Matriz 39001"> Factores Desempeño (39001)</label>
+                    </div>
+                    
+                    <div style="margin-top: 15px; display: flex; gap: 20px;">
+                        <label><input type="checkbox" id="inc_req_procedimientos"> Modificar procedimientos/instructivos</label>
+                        <label><input type="checkbox" id="inc_req_entrenamiento"> Reentrenamiento del personal</label>
+                    </div>
+                </div>
+
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="submit" class="btn">GUARDAR INVESTIGACIÓN</button>
+                </div>
+            </form>
         </div>
     </div>
 
