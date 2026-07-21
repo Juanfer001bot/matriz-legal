@@ -1,61 +1,143 @@
-import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import httpx
-from dotenv import load_dotenv
+from pydantic import BaseModel, EmailStr
+from typing import Optional, List
 
-load_dotenv()
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_IDS = [x.strip() for x in os.getenv("TELEGRAM_CHAT_IDS", "").split(",") if x.strip()]
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-ALERT_EMAILS = [x.strip() for x in os.getenv("ALERT_EMAILS", "").split(",") if x.strip()]
+class WorkspaceBase(BaseModel):
+    name: str
 
-async def send_telegram_alert(message: str):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_IDS or not TELEGRAM_CHAT_IDS[0]:
-        print("Telegram config is missing, skipping alert.")
-        return
-    
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    
-    async with httpx.AsyncClient() as client:
-        for chat_id in TELEGRAM_CHAT_IDS:
-            if not chat_id: continue
-            payload = {
-                "chat_id": chat_id,
-                "text": message,
-                "parse_mode": "HTML"
-            }
-            try:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-                print(f"Telegram alert sent to {chat_id}")
-            except Exception as e:
-                print(f"Error sending Telegram alert: {e}")
+class WorkspaceCreate(WorkspaceBase):
+    pass
 
-def send_email_alert(subject: str, message: str):
-    if not SMTP_USERNAME or not SMTP_PASSWORD or not ALERT_EMAILS or not ALERT_EMAILS[0]:
-        raise ValueError("Configuración de correo incompleta en las variables de entorno.")
+class WorkspaceResponse(WorkspaceBase):
+    id: int
+    class Config:
+        from_attributes = True
 
-    msg = MIMEMultipart()
-    msg['From'] = SMTP_USERNAME
-    msg['To'] = ", ".join(ALERT_EMAILS)
-    msg['Subject'] = subject
-    
-    msg.attach(MIMEText(message, 'html'))
-    
-    try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        text = msg.as_string()
-        server.sendmail(SMTP_USERNAME, ALERT_EMAILS, text)
-        server.quit()
-        print("Email alert sent successfully.")
-    except Exception as e:
-        print(f"Error sending Email alert: {e}")
-        raise e
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    workspace_ids: List[int] = []
+    allowed_jurisdictions: str = "[]"
+
+class UserUpdate(BaseModel):
+    password: Optional[str] = None
+    workspace_ids: Optional[List[int]] = None
+    allowed_jurisdictions: Optional[str] = None
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    workspaces: List[WorkspaceResponse] = []
+    allowed_jurisdictions: str = "[]"
+
+    class Config:
+        from_attributes = True
+
+class LegalRequirementBase(BaseModel):
+    workspace_id: Optional[int] = None
+    tipo_norma: Optional[str] = ""
+    numero: Optional[str] = ""
+    anio_fecha: Optional[str] = ""
+    jurisdiccion_nacional: Optional[str] = ""
+    jurisdiccion_local: Optional[str] = ""
+    tema: Optional[str] = ""
+    titulo: Optional[str] = ""
+    breve_descripcion: Optional[str] = ""
+    autoridad_aplicacion: Optional[str] = ""
+    estado_vigencia: Optional[str] = ""
+    articulos_aplicables: Optional[str] = ""
+    requisito_obligacion: Optional[str] = ""
+    evidencia_cumplimiento: Optional[str] = ""
+    estado_cumplimiento: Optional[str] = ""
+    link_web: Optional[str] = ""
+
+class LegalRequirementCreate(LegalRequirementBase):
+    inbox_id: Optional[int] = None
+
+class LegalRequirementUpdate(LegalRequirementBase):
+    pass
+
+class LegalRequirementResponse(LegalRequirementBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class ScraperInboxResponse(BaseModel):
+    id: int
+    fecha: str
+    jurisdiccion_nacional: str
+    jurisdiccion_local: str
+    tipo_norma: str
+    titulo: str
+    autoridad_aplicacion: str
+    link_web: Optional[str] = ""
+
+    class Config:
+        from_attributes = True
+
+class ActionPlanBase(BaseModel):
+    workspace_id: Optional[int] = None
+    requirement_id: Optional[int] = None
+    nc_id: Optional[str] = ""
+    origen_nc: Optional[str] = ""
+    responsable: Optional[str] = ""
+    fecha_compromiso: Optional[str] = ""
+    accion_implementar: Optional[str] = ""
+    estado_avance: Optional[str] = "Pendiente"
+    fecha_cierre: Optional[str] = ""
+
+class ActionPlanCreate(ActionPlanBase):
+    pass
+
+class ActionPlanUpdate(ActionPlanBase):
+    pass
+
+class ActionPlanResponse(ActionPlanBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class MeetingMinuteBase(BaseModel):
+    workspace_id: Optional[int] = None
+    fecha: Optional[str] = ""
+    participantes: Optional[str] = ""
+    temas_tratados: Optional[str] = ""
+    archivo_adjunto: Optional[str] = ""
+
+class MeetingMinuteCreate(MeetingMinuteBase):
+    pass
+
+class MeetingMinuteUpdate(MeetingMinuteBase):
+    pass
+
+class MeetingMinuteResponse(MeetingMinuteBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+class ConsultationBase(BaseModel):
+    workspace_id: Optional[int] = None
+    fecha: Optional[str] = ""
+    tipo: Optional[str] = "Consulta"
+    detalle: Optional[str] = ""
+    es_anonimo: Optional[int] = 0
+    autor: Optional[str] = ""
+    estado: Optional[str] = "Pendiente"
+    analisis_gestor: Optional[str] = ""
+    archivo_adjunto: Optional[str] = ""
+
+class ConsultationCreate(ConsultationBase):
+    pass
+
+class ConsultationUpdate(ConsultationBase):
+    pass
+
+class ConsultationResponse(ConsultationBase):
+    id: int
+    class Config:
+        from_attributes = True
