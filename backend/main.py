@@ -20,7 +20,7 @@ from .chatbot import get_chatbot_response
 from .notifications import send_telegram_alert, TELEGRAM_BOT_TOKEN, send_email_alert
 from .auth import verify_password, get_password_hash, create_access_token, get_current_user
 
-from drive_sync import sync_drive_folder
+from .drive_sync import sync_drive_folder
 
 # Inicializar Base de Datos
 init_db()
