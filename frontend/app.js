@@ -362,20 +362,21 @@ function renderInboxTable(items) {
     if (!inboxTableBody) return;
     inboxTableBody.innerHTML = '';
     if (items.length === 0) {
-        inboxTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay novedades pendientes.</td></tr>';
+        inboxTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay novedades pendientes.</td></tr>';
         return;
     }
     
     items.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td style="text-align: center;"><input type="checkbox" class="inbox-item-checkbox" value="${item.id}"></td>
             <td>${item.fecha}</td>
             <td>${item.jurisdiccion_nacional}</td>
             <td>${item.jurisdiccion_local}</td>
             <td>${item.tipo_norma}</td>
             <td><div style="max-width:350px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.titulo}">${item.titulo}</div></td>
             <td>
-                <button class="action-btn" onclick='approveInboxItem(${JSON.stringify(item).replace(/'/g, "\'")})' style="background-color: var(--primary);">Aprobar</button>
+                <button class="action-btn" onclick='approveInboxItem(${JSON.stringify(item).replace(/'/g, "\\'")})' style="background-color: var(--primary);">Aprobar</button>
                 <button class="action-btn" onclick="discardInboxItem(${item.id})" style="background-color: #ff4d4d;">Descartar</button>
             </td>
         `;
@@ -384,7 +385,7 @@ function renderInboxTable(items) {
 }
 
 async function discardInboxItem(id) {
-    if (!confirm('¿Seguro que deseas descartar esta novedad? No se agregará a la matriz.')) return;
+    if (!confirm('¿Seguro que deseas descartar esta novedad?')) return;
     try {
         const res = await fetch(`/api/inbox/${id}`, {
             method: 'DELETE',
@@ -392,10 +393,60 @@ async function discardInboxItem(id) {
         });
         if (res.ok) {
             fetchInbox();
+        } else {
+            alert('Error al descartar novedad');
         }
     } catch (e) {
-        console.error('Error discarding inbox item', e);
+        console.error(e);
     }
+}
+
+const selectAllInbox = document.getElementById('selectAllInbox');
+if (selectAllInbox) {
+    selectAllInbox.addEventListener('change', (e) => {
+        const checkboxes = document.querySelectorAll('.inbox-item-checkbox');
+        checkboxes.forEach(cb => cb.checked = e.target.checked);
+    });
+}
+
+const btnBulkDiscard = document.getElementById('btnBulkDiscard');
+if (btnBulkDiscard) {
+    btnBulkDiscard.addEventListener('click', async () => {
+        const checked = document.querySelectorAll('.inbox-item-checkbox:checked');
+        if (checked.length === 0) {
+            alert('Por favor, selecciona al menos una novedad para descartar.');
+            return;
+        }
+        if (!confirm(`¿Seguro que deseas descartar las ${checked.length} novedades seleccionadas?`)) return;
+        
+        const ids = Array.from(checked).map(cb => parseInt(cb.value));
+        const btnText = btnBulkDiscard.innerHTML;
+        btnBulkDiscard.innerHTML = 'Descartando...';
+        btnBulkDiscard.disabled = true;
+        
+        try {
+            const res = await fetch('/api/inbox/bulk-delete', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ item_ids: ids })
+            });
+            if (res.ok) {
+                if (selectAllInbox) selectAllInbox.checked = false;
+                fetchInbox();
+            } else {
+                alert('Error al descartar novedades en lote.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión al descartar.');
+        } finally {
+            btnBulkDiscard.innerHTML = btnText;
+            btnBulkDiscard.disabled = false;
+        }
+    });
 }
 
 function approveInboxItem(item) {

@@ -342,10 +342,14 @@
         <div class="modal-content glass" style="max-width: 1000px; max-height: 80vh; overflow-y: auto;">
             <span class="close-btn" id="closeInboxModal">&times;</span>
             <h2 style="margin-top:0">Bandeja de Novedades (Scraper)</h2>
-            <p style="margin-bottom: 15px;">Revisa las normativas detectadas por el bot. Apruébalas para completar su clasificación y agregarlas a la matriz, o descártalas.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <p style="margin: 0;">Revisa las normativas detectadas por el bot. Apruébalas para completar su clasificación y agregarlas a la matriz, o descártalas.</p>
+                <button class="btn-primary" id="btnBulkDiscard" style="background-color: #ff4d4d; white-space: nowrap;">🗑️ Descartar Seleccionados</button>
+            </div>
             <table style="width: 100%; text-align: left; margin-top: 15px;" id="inboxTable">
                 <thead>
                     <tr>
+                        <th style="padding-bottom: 10px; width: 40px; text-align: center;"><input type="checkbox" id="selectAllInbox" title="Seleccionar Todos"></th>
                         <th style="padding-bottom: 10px;">Fecha</th>
                         <th style="padding-bottom: 10px;">Nacional</th>
                         <th style="padding-bottom: 10px;">Local</th>
