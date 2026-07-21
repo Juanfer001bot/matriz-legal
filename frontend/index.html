@@ -32,6 +32,7 @@
                 <button class="btn" id="btnMatrizView" style="display: none;">Ver Matriz Legal</button>
                 <button class="btn" id="btnActionPlans">Planes de Acción</button>
                 <button class="btn" id="btnIncidentes" style="background-color: #f77f00; color: white;">Investigación Incidentes</button>
+                <button class="btn" id="btnDocuments" style="background-color: #0077b6; color: white;">Info Documentada (ISO)</button>
                 <button class="btn" id="btnNewReq">Nueva Normativa</button>
                 <button class="btn-secondary" id="btnInbox" style="display: none; background-color: var(--accent);">Bandeja de Novedades</button>
                 <button class="btn-secondary" id="btnChangePassword">Mi Contraseña</button>
@@ -177,6 +178,32 @@
                     </tr>
                 </thead>
                 <tbody id="incidentsTableBody"></tbody>
+            </table>
+        </section>
+
+        <!-- Nueva sección para ISO 7.5 Info Documentada -->
+        <section class="table-container glass" id="documentsTableContainer" style="display: none;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-size: 1.2rem;">Lista Maestra de Documentos</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label><input type="checkbox" id="chkShowObsoleteDocs"> Mostrar Histórico (Obsoletos)</label>
+                    <button class="btn-primary" id="btnNewDocument" style="background-color: #0077b6;">NUEVO DOCUMENTO</button>
+                </div>
+            </div>
+            <table id="documentsTable">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Título</th>
+                        <th>Versión</th>
+                        <th>Estado</th>
+                        <th>Revisor</th>
+                        <th>Aprobador</th>
+                        <th>Próxima Rev.</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="documentsTableBody"></tbody>
             </table>
         </section>
     </div>
@@ -789,6 +816,135 @@
                     <button type="submit" class="btn">GUARDAR INVESTIGACIÓN</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Form (Documento ISO 7.5) -->
+    <div id="modalDocument" class="modal">
+        <div class="modal-content glass" style="max-width: 800px;">
+            <span class="close-btn" id="closeDocModal">&times;</span>
+            <h2 id="modalDocTitle">Gestión de Información Documentada</h2>
+            
+            <div style="background-color: #f1f5f9; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: bold; color: #333;">Estado Actual: <span id="doc_estado_display" style="color: #0077b6;">Borrador</span></div>
+                <div id="doc_workflow_buttons">
+                    <!-- Dynamic buttons injected via JS depending on state and user -->
+                </div>
+            </div>
+
+            <form id="docForm">
+                <input type="hidden" id="doc_id">
+                <input type="hidden" id="doc_estado" value="Borrador">
+                
+                <div class="form-section">
+                    <h3>Metadatos del Documento</h3>
+                    <div class="grid-2">
+                        <div>
+                            <label>Código del Documento</label>
+                            <input type="text" id="doc_codigo" placeholder="Ej. PRO-SST-01" required>
+                        </div>
+                        <div>
+                            <label>Tipo de Documento</label>
+                            <select id="doc_tipo" required>
+                                <option value="">Seleccione...</option>
+                                <option value="Manual">Manual</option>
+                                <option value="Procedimiento">Procedimiento</option>
+                                <option value="Instructivo">Instructivo</option>
+                                <option value="Formulario">Formulario</option>
+                                <option value="Política">Política</option>
+                                <option value="Matriz">Matriz / Registro</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 10px;">
+                        <label>Título del Documento</label>
+                        <input type="text" id="doc_titulo" required>
+                    </div>
+
+                    <div style="margin-top: 10px;">
+                        <label>Enlace al Archivo Físico (SharePoint, Drive, etc.)</label>
+                        <input type="url" id="doc_link" placeholder="https://...">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Ciclo de Vida y Versionado</h3>
+                    <div class="grid-2">
+                        <div>
+                            <label>Versión</label>
+                            <input type="number" id="doc_version" value="0" readonly style="background-color: #eee;">
+                        </div>
+                        <div>
+                            <label>Próxima Revisión</label>
+                            <input type="date" id="doc_proxima_rev">
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label>Motivo del Cambio (Obligatorio para versiones > 0)</label>
+                        <textarea id="doc_motivo" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Responsabilidades (Flujo de Aprobación)</h3>
+                    <p style="font-size: 0.85rem; color: #666;">Ingresa los correos electrónicos exactos de las personas que deben revisar y aprobar.</p>
+                    <div class="grid-2">
+                        <div>
+                            <label>Email del Revisor</label>
+                            <input type="email" id="doc_revisor" placeholder="revisor@empresa.com" required>
+                        </div>
+                        <div>
+                            <label>Email del Aprobador</label>
+                            <input type="email" id="doc_aprobador" placeholder="gerente@empresa.com" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn-primary" id="btnSaveDoc">Guardar Borrador / Cambios</button>
+                    <button type="button" class="btn" id="btnCreateNewVersion" style="background-color: #2a9d8f; display: none;">Crear Nueva Versión</button>
+                    <button type="button" class="btn" id="btnAcknowledge" style="background-color: #e9c46a; color: #333; display: none;">Tomar Conocimiento</button>
+                    <button type="button" class="btn-secondary" id="btnViewAudit" style="display: none;">Ver Trazabilidad</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Form (Document Audit & Receipts) -->
+    <div id="modalDocumentAudit" class="modal">
+        <div class="modal-content glass" style="max-width: 700px;">
+            <span class="close-btn" id="closeDocAuditModal">&times;</span>
+            <h2>Trazabilidad y Acuses de Recibo</h2>
+            
+            <div class="form-section">
+                <h3>Log de Auditoría</h3>
+                <table style="font-size: 0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                            <th>Comentarios</th>
+                        </tr>
+                    </thead>
+                    <tbody id="docAuditLogBody"></tbody>
+                </table>
+            </div>
+
+            <div class="form-section">
+                <h3>Acuses de Recibo ("Leído y Comprendido")</h3>
+                <table style="font-size: 0.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Email del Usuario</th>
+                            <th>Fecha de Toma de Conocimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="docReceiptsBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 

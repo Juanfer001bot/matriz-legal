@@ -112,6 +112,58 @@ class IncidentReportResponse(IncidentReportBase):
     class Config:
         from_attributes = True
 
+class DocumentBase(BaseModel):
+    workspace_id: Optional[int] = None
+    codigo: str
+    titulo: str
+    tipo: str
+    version: int
+    estado: str
+    link_archivo: Optional[str] = ""
+    fecha_creacion: Optional[str] = ""
+    fecha_aprobacion: Optional[str] = ""
+    fecha_proxima_rev: Optional[str] = ""
+    autor: Optional[str] = ""
+    revisor: Optional[str] = ""
+    aprobador: Optional[str] = ""
+    motivo_cambio: Optional[str] = ""
+
+class DocumentCreate(DocumentBase):
+    pass
+
+class DocumentUpdate(DocumentBase):
+    pass
+
+class DocumentResponse(DocumentBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+class DocumentStatusUpdate(BaseModel):
+    nuevo_estado: str
+    comentario: Optional[str] = ""
+
+class DocumentAuditLogResponse(BaseModel):
+    id: int
+    document_id: int
+    fecha: str
+    usuario: str
+    accion: str
+    comentario: Optional[str] = ""
+
+    class Config:
+        from_attributes = True
+
+class DocumentReadReceiptResponse(BaseModel):
+    id: int
+    document_id: int
+    usuario_email: str
+    fecha_lectura: str
+
+    class Config:
+        from_attributes = True
+
 class BulkDeleteRequest(BaseModel):
     item_ids: List[int]
 

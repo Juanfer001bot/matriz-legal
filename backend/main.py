@@ -719,6 +719,121 @@ def delete_incident(incident_id: int, db: Session = Depends(get_db), current_use
         db.commit()
     return {"status": "success"}
 
+# ==========================================
+# ISO 7.5 - INFORMACIÓN DOCUMENTADA
+# ==========================================
+from datetime import datetime
+
+@app.get("/api/documents")
+def get_documents(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    query = db.query(models.Document)
+    if workspace_id:
+        query = query.filter(models.Document.workspace_id == workspace_id)
+    # If not admin, maybe filter? We'll let frontend handle filtering for now or return all.
+    return query.all()
+
+@app.post("/api/documents", response_model=schemas.DocumentResponse)
+def create_document(doc: schemas.DocumentCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_doc = models.Document(**doc.model_dump())
+    db.add(db_doc)
+    db.commit()
+    db.refresh(db_doc)
+    
+    # Audit log
+    audit = models.DocumentAuditLog(
+        document_id=db_doc.id,
+        fecha=datetime.now().isoformat(),
+        usuario=current_user.email,
+        accion="Creación de documento",
+        comentario="Versión inicial" if db_doc.version == 0 else f"Nueva versión {db_doc.version}"
+    )
+    db.add(audit)
+    db.commit()
+    return db_doc
+
+@app.put("/api/documents/{doc_id}/status", response_model=schemas.DocumentResponse)
+def update_document_status(doc_id: int, status_update: schemas.DocumentStatusUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_doc = db.query(models.Document).filter(models.Document.id == doc_id).first()
+    if not db_doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    old_status = db_doc.estado
+    new_status = status_update.nuevo_estado
+    
+    # Auth checks
+    if new_status == "Pendiente Aprobación" and current_user.email != db_doc.revisor and current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Sólo el revisor puede enviar a aprobar")
+    if new_status == "Vigente" and current_user.email != db_doc.aprobador and current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Sólo el aprobador puede publicar el documento")
+        
+    db_doc.estado = new_status
+    
+    # If becoming Vigente, obsolete the previous one
+    if new_status == "Vigente":
+        db_doc.fecha_aprobacion = datetime.now().isoformat()
+        old_docs = db.query(models.Document).filter(
+            models.Document.codigo == db_doc.codigo,
+            models.Document.id != db_doc.id,
+            models.Document.estado == "Vigente",
+            models.Document.workspace_id == db_doc.workspace_id
+        ).all()
+        for od in old_docs:
+            od.estado = "Obsoleto"
+            # Audit log for obsolete
+            db.add(models.DocumentAuditLog(
+                document_id=od.id,
+                fecha=datetime.now().isoformat(),
+                usuario="SISTEMA",
+                accion="Obsolescencia Automática",
+                comentario=f"Reemplazado por nueva versión {db_doc.version}"
+            ))
+
+    db.commit()
+    
+    # Audit log for status change
+    audit = models.DocumentAuditLog(
+        document_id=db_doc.id,
+        fecha=datetime.now().isoformat(),
+        usuario=current_user.email,
+        accion=f"Cambio de estado: {old_status} -> {new_status}",
+        comentario=status_update.comentario
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(db_doc)
+    return db_doc
+
+@app.post("/api/documents/{doc_id}/acknowledge")
+def acknowledge_document(doc_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_doc = db.query(models.Document).filter(models.Document.id == doc_id).first()
+    if not db_doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    existing = db.query(models.DocumentReadReceipt).filter(
+        models.DocumentReadReceipt.document_id == doc_id,
+        models.DocumentReadReceipt.usuario_email == current_user.email
+    ).first()
+    
+    if existing:
+        return {"status": "already_acknowledged"}
+        
+    receipt = models.DocumentReadReceipt(
+        document_id=doc_id,
+        usuario_email=current_user.email,
+        fecha_lectura=datetime.now().isoformat()
+    )
+    db.add(receipt)
+    db.commit()
+    return {"status": "success"}
+
+@app.get("/api/documents/{doc_id}/receipts", response_model=List[schemas.DocumentReadReceiptResponse])
+def get_document_receipts(doc_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return db.query(models.DocumentReadReceipt).filter(models.DocumentReadReceipt.document_id == doc_id).all()
+
+@app.get("/api/documents/{doc_id}/audit", response_model=List[schemas.DocumentAuditLogResponse])
+def get_document_audit(doc_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    return db.query(models.DocumentAuditLog).filter(models.DocumentAuditLog.document_id == doc_id).all()
+
 @app.get("/api/bot/migrate-participacion")
 def migrate_participacion(db: Session = Depends(get_db)):
     from sqlalchemy import text
@@ -734,6 +849,21 @@ def migrate_participacion(db: Session = Depends(get_db)):
         
     try:
         models.IncidentReport.__table__.create(engine)
+    except Exception:
+        pass
+        
+    try:
+        models.Document.__table__.create(engine)
+    except Exception:
+        pass
+        
+    try:
+        models.DocumentAuditLog.__table__.create(engine)
+    except Exception:
+        pass
+        
+    try:
+        models.DocumentReadReceipt.__table__.create(engine)
     except Exception:
         pass
         

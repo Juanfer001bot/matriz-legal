@@ -1383,4 +1383,381 @@ if (btnCreateActionFromIncident) {
     });
 }
 
+// ==========================================
+// MÓDULO DE INFORMACIÓN DOCUMENTADA (ISO 7.5)
+// ==========================================
+let allDocuments = [];
+
+const btnDocuments = document.getElementById('btnDocuments');
+const documentsTableContainer = document.getElementById('documentsTableContainer');
+const documentsTableBody = document.getElementById('documentsTableBody');
+const modalDocument = document.getElementById('modalDocument');
+const closeDocModal = document.getElementById('closeDocModal');
+const docForm = document.getElementById('docForm');
+const btnNewDocument = document.getElementById('btnNewDocument');
+const chkShowObsoleteDocs = document.getElementById('chkShowObsoleteDocs');
+
+// Navigation
+if (btnDocuments) {
+    btnDocuments.addEventListener('click', () => {
+        // Show other buttons
+        ['btnMatrizView', 'btnActionPlans', 'btnParticipacion', 'btnIncidentes'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.style.display = 'inline-block';
+        });
+        btnDocuments.style.display = 'none';
+
+        // Hide other containers
+        const containersToHide = [
+            'matrizFilters', 'matrizTableContainer', 'actionPlanFilters', 'actionPlanTableContainer',
+            'participacionFilters', 'consultasTableContainer', 'minutasTableContainer', 'incidentsTableContainer'
+        ];
+        containersToHide.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+
+        documentsTableContainer.style.display = 'block';
+        fetchDocuments();
+    });
+}
+
+// Hook other navigation buttons to hide documents container
+['btnMatrizView', 'btnActionPlans', 'btnParticipacion', 'btnIncidentes'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+        btn.addEventListener('click', () => {
+            if (documentsTableContainer) documentsTableContainer.style.display = 'none';
+            if (btnDocuments) btnDocuments.style.display = 'inline-block';
+        });
+    }
+});
+
+if (chkShowObsoleteDocs) {
+    chkShowObsoleteDocs.addEventListener('change', () => {
+        renderDocuments(allDocuments);
+    });
+}
+
+async function fetchDocuments() {
+    try {
+        const response = await fetch(`/api/documents?workspace_id=${currentWorkspaceId}`);
+        allDocuments = await response.json();
+        renderDocuments(allDocuments);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function getStatusBadge(status) {
+    switch(status) {
+        case 'Borrador': return '<span class="badge" style="background-color:#ccc; color:#333;">Borrador</span>';
+        case 'Pendiente Revisión': return '<span class="badge" style="background-color:#fca311; color:#fff;">En Revisión</span>';
+        case 'Pendiente Aprobación': return '<span class="badge" style="background-color:#e63946; color:#fff;">Por Aprobar</span>';
+        case 'Vigente': return '<span class="badge" style="background-color:#2a9d8f; color:#fff;">Vigente</span>';
+        case 'Obsoleto': return '<span class="badge" style="background-color:#333; color:#fff;">Obsoleto</span>';
+        default: return status;
+    }
+}
+
+function renderDocuments(docs) {
+    if (!documentsTableBody) return;
+    documentsTableBody.innerHTML = '';
+    
+    const showObsolete = chkShowObsoleteDocs ? chkShowObsoleteDocs.checked : false;
+
+    docs.forEach(doc => {
+        if (!showObsolete && doc.estado === 'Obsoleto') return;
+
+        // Si no soy admin y el doc no es Vigente, y no soy ni revisor ni aprobador, no debería verlo en teoría, pero por ahora lo mostramos para testear.
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${doc.codigo}</strong></td>
+            <td>${doc.titulo}</td>
+            <td>v${doc.version.toString().padStart(2, '0')}</td>
+            <td>${getStatusBadge(doc.estado)}</td>
+            <td>${doc.revisor}</td>
+            <td>${doc.aprobador}</td>
+            <td>${doc.fecha_proxima_rev ? new Date(doc.fecha_proxima_rev).toLocaleDateString() : '-'}</td>
+            <td>
+                <button class="btn-secondary btn-sm" onclick="editDocument(${doc.id})">Abrir</button>
+            </td>
+        `;
+        documentsTableBody.appendChild(tr);
+    });
+}
+
+if (btnNewDocument) {
+    btnNewDocument.addEventListener('click', () => {
+        docForm.reset();
+        document.getElementById('doc_id').value = '';
+        document.getElementById('doc_estado').value = 'Borrador';
+        document.getElementById('doc_estado_display').innerText = 'Borrador';
+        document.getElementById('doc_version').value = '0';
+        document.getElementById('doc_workflow_buttons').innerHTML = '';
+        
+        document.getElementById('btnCreateNewVersion').style.display = 'none';
+        document.getElementById('btnAcknowledge').style.display = 'none';
+        document.getElementById('btnViewAudit').style.display = 'none';
+        document.getElementById('btnSaveDoc').style.display = 'inline-block';
+        
+        modalDocument.classList.add('active');
+    });
+}
+
+if (closeDocModal) {
+    closeDocModal.addEventListener('click', () => {
+        modalDocument.classList.remove('active');
+    });
+}
+
+// Global func to edit doc
+window.editDocument = async function(id) {
+    const doc = allDocuments.find(d => d.id === id);
+    if (!doc) return;
+
+    document.getElementById('doc_id').value = doc.id;
+    document.getElementById('doc_estado').value = doc.estado;
+    document.getElementById('doc_codigo').value = doc.codigo;
+    document.getElementById('doc_tipo').value = doc.tipo;
+    document.getElementById('doc_titulo').value = doc.titulo;
+    document.getElementById('doc_version').value = doc.version;
+    document.getElementById('doc_link').value = doc.link_archivo;
+    document.getElementById('doc_proxima_rev').value = doc.fecha_proxima_rev;
+    document.getElementById('doc_motivo').value = doc.motivo_cambio;
+    document.getElementById('doc_revisor').value = doc.revisor;
+    document.getElementById('doc_aprobador').value = doc.aprobador;
+
+    document.getElementById('doc_estado_display').innerHTML = getStatusBadge(doc.estado);
+    
+    setupWorkflowButtons(doc);
+    
+    modalDocument.classList.add('active');
+};
+
+function setupWorkflowButtons(doc) {
+    const container = document.getElementById('doc_workflow_buttons');
+    container.innerHTML = '';
+    const btnSave = document.getElementById('btnSaveDoc');
+    const btnNewVersion = document.getElementById('btnCreateNewVersion');
+    const btnAcknowledge = document.getElementById('btnAcknowledge');
+    const btnViewAudit = document.getElementById('btnViewAudit');
+    
+    // Always show view audit
+    btnViewAudit.style.display = 'inline-block';
+
+    const isAdmin = currentUserEmail === 'juan@test.com';
+    const isRevisor = currentUserEmail === doc.revisor;
+    const isAprobador = currentUserEmail === doc.aprobador;
+
+    if (doc.estado === 'Borrador') {
+        btnSave.style.display = 'inline-block';
+        btnNewVersion.style.display = 'none';
+        btnAcknowledge.style.display = 'none';
+        
+        const btnReqRev = document.createElement('button');
+        btnReqRev.type = 'button';
+        btnReqRev.className = 'btn';
+        btnReqRev.style.backgroundColor = '#fca311';
+        btnReqRev.innerText = 'Solicitar Revisión';
+        btnReqRev.onclick = () => changeDocumentStatus(doc.id, 'Pendiente Revisión');
+        container.appendChild(btnReqRev);
+    } 
+    else if (doc.estado === 'Pendiente Revisión') {
+        btnSave.style.display = (isAdmin || isRevisor) ? 'inline-block' : 'none';
+        btnNewVersion.style.display = 'none';
+        btnAcknowledge.style.display = 'none';
+        
+        if (isAdmin || isRevisor) {
+            const btnReqApr = document.createElement('button');
+            btnReqApr.type = 'button';
+            btnReqApr.className = 'btn';
+            btnReqApr.style.backgroundColor = '#e63946';
+            btnReqApr.innerText = 'Revisado -> Solicitar Aprobación';
+            btnReqApr.onclick = () => changeDocumentStatus(doc.id, 'Pendiente Aprobación');
+            container.appendChild(btnReqApr);
+        }
+    }
+    else if (doc.estado === 'Pendiente Aprobación') {
+        btnSave.style.display = (isAdmin || isAprobador) ? 'inline-block' : 'none';
+        btnNewVersion.style.display = 'none';
+        btnAcknowledge.style.display = 'none';
+        
+        if (isAdmin || isAprobador) {
+            const btnApprove = document.createElement('button');
+            btnApprove.type = 'button';
+            btnApprove.className = 'btn';
+            btnApprove.style.backgroundColor = '#2a9d8f';
+            btnApprove.innerText = 'Aprobar y Publicar';
+            btnApprove.onclick = () => changeDocumentStatus(doc.id, 'Vigente');
+            container.appendChild(btnApprove);
+        }
+    }
+    else if (doc.estado === 'Vigente') {
+        btnSave.style.display = isAdmin ? 'inline-block' : 'none';
+        btnNewVersion.style.display = 'inline-block';
+        btnAcknowledge.style.display = 'inline-block';
+    }
+    else if (doc.estado === 'Obsoleto') {
+        btnSave.style.display = 'none';
+        btnNewVersion.style.display = 'none';
+        btnAcknowledge.style.display = 'none';
+    }
+}
+
+async function changeDocumentStatus(id, newStatus) {
+    if (!confirm(`¿Estás seguro de cambiar el estado a ${newStatus}?`)) return;
+    try {
+        const response = await fetch(`/api/documents/${id}/status`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ nuevo_estado: newStatus, comentario: "Cambio de flujo" })
+        });
+        if (response.ok) {
+            fetchDocuments();
+            modalDocument.classList.remove('active');
+        } else {
+            const err = await response.json();
+            alert(`Error: ${err.detail}`);
+        }
+    } catch(e) { console.error(e); }
+}
+
+if (docForm) {
+    docForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (!currentWorkspaceId) {
+            alert('Debes seleccionar un espacio de trabajo primero.');
+            return;
+        }
+
+        const payload = {
+            workspace_id: currentWorkspaceId,
+            codigo: document.getElementById('doc_codigo').value,
+            tipo: document.getElementById('doc_tipo').value,
+            titulo: document.getElementById('doc_titulo').value,
+            version: parseInt(document.getElementById('doc_version').value || "0"),
+            estado: document.getElementById('doc_estado').value || 'Borrador',
+            link_archivo: document.getElementById('doc_link').value,
+            fecha_proxima_rev: document.getElementById('doc_proxima_rev').value,
+            motivo_cambio: document.getElementById('doc_motivo').value,
+            revisor: document.getElementById('doc_revisor').value,
+            aprobador: document.getElementById('doc_aprobador').value,
+            autor: currentUserEmail
+        };
+
+        const id = document.getElementById('doc_id').value;
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/documents/${id}` : '/api/documents';
+        
+        if (id) {
+            alert("No hay endpoint de edición de metadatos programado. Para cambiar contenido crea una Nueva Versión.");
+            return;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                modalDocument.classList.remove('active');
+                fetchDocuments();
+            } else {
+                alert("Error al guardar el documento.");
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    });
+}
+
+// Logic for New Version
+const btnCreateNewVersion = document.getElementById('btnCreateNewVersion');
+if (btnCreateNewVersion) {
+    btnCreateNewVersion.addEventListener('click', () => {
+        if(!confirm('Esto creará un nuevo Borrador (v+1) conservando los metadatos. ¿Continuar?')) return;
+        
+        const currentVersion = parseInt(document.getElementById('doc_version').value);
+        document.getElementById('doc_id').value = '';
+        document.getElementById('doc_estado').value = 'Borrador';
+        document.getElementById('doc_estado_display').innerText = 'Borrador';
+        document.getElementById('doc_version').value = currentVersion + 1;
+        document.getElementById('doc_motivo').value = ''; // Reset motivo
+        
+        setupWorkflowButtons({estado: 'Borrador', revisor: document.getElementById('doc_revisor').value, aprobador: document.getElementById('doc_aprobador').value});
+        
+        alert("Modifica los datos que necesites e ingresa el Motivo del Cambio, luego haz clic en Guardar Borrador.");
+    });
+}
+
+// Acknowledge logic
+const btnAcknowledge = document.getElementById('btnAcknowledge');
+if (btnAcknowledge) {
+    btnAcknowledge.addEventListener('click', async () => {
+        const id = document.getElementById('doc_id').value;
+        try {
+            const res = await fetch(`/api/documents/${id}/acknowledge`, { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'already_acknowledged') {
+                    alert('Ya habías confirmado la lectura de este documento.');
+                } else {
+                    alert('Acuse de recibo registrado correctamente. ¡Gracias!');
+                }
+            }
+        } catch(e) { console.error(e); }
+    });
+}
+
+// Audit & Receipts logic
+const modalDocumentAudit = document.getElementById('modalDocumentAudit');
+const closeDocAuditModal = document.getElementById('closeDocAuditModal');
+const btnViewAudit = document.getElementById('btnViewAudit');
+
+if (closeDocAuditModal) {
+    closeDocAuditModal.addEventListener('click', () => {
+        modalDocumentAudit.classList.remove('active');
+    });
+}
+
+if (btnViewAudit) {
+    btnViewAudit.addEventListener('click', async () => {
+        const id = document.getElementById('doc_id').value;
+        if (!id) return;
+        
+        // Fetch audit
+        try {
+            const resAudit = await fetch(`/api/documents/${id}/audit`);
+            const auditData = await resAudit.json();
+            const auditBody = document.getElementById('docAuditLogBody');
+            auditBody.innerHTML = '';
+            auditData.forEach(a => {
+                auditBody.innerHTML += `<tr>
+                    <td>${new Date(a.fecha).toLocaleString()}</td>
+                    <td>${a.usuario}</td>
+                    <td>${a.accion}</td>
+                    <td>${a.comentario || ''}</td>
+                </tr>`;
+            });
+            
+            // Fetch receipts
+            const resReceipts = await fetch(`/api/documents/${id}/receipts`);
+            const receiptData = await resReceipts.json();
+            const recBody = document.getElementById('docReceiptsBody');
+            recBody.innerHTML = '';
+            receiptData.forEach(r => {
+                recBody.innerHTML += `<tr>
+                    <td>${r.usuario_email}</td>
+                    <td>${new Date(r.fecha_lectura).toLocaleString()}</td>
+                </tr>`;
+            });
+            
+            modalDocumentAudit.classList.add('active');
+        } catch (e) { console.error(e); }
+    });
+}
+
 

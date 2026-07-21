@@ -160,3 +160,45 @@ class IncidentReport(Base):
     requiere_actualizacion = Column(Text, default="{}") # JSON of checkboxes
     
     workspace = relationship("Workspace")
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(Integer, ForeignKey("workspaces.id"))
+    
+    codigo = Column(String, index=True)
+    titulo = Column(String)
+    tipo = Column(String)
+    version = Column(Integer, default=0)
+    estado = Column(String, default="Borrador") # Borrador, Pendiente Revisión, Pendiente Aprobación, Vigente, Obsoleto
+    link_archivo = Column(Text, default="")
+    
+    fecha_creacion = Column(String, default="")
+    fecha_aprobacion = Column(String, default="")
+    fecha_proxima_rev = Column(String, default="")
+    
+    autor = Column(String, default="")
+    revisor = Column(String, default="")
+    aprobador = Column(String, default="")
+    motivo_cambio = Column(Text, default="")
+
+    workspace = relationship("Workspace")
+
+class DocumentAuditLog(Base):
+    __tablename__ = "document_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"))
+    fecha = Column(String)
+    usuario = Column(String)
+    accion = Column(String)
+    comentario = Column(Text, default="")
+
+class DocumentReadReceipt(Base):
+    __tablename__ = "document_read_receipts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"))
+    usuario_email = Column(String)
+    fecha_lectura = Column(String)
