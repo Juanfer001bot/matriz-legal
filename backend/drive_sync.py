@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 # Rutas y configuración
-CREDENTIALS_FILE = 'credentials.json' # Debe estar en la carpeta backend o en la raíz, preferiblemente en backend
+# Puede leerse de una variable de entorno (ideal para producción en Render con Secret Files)
+CREDENTIALS_FILE = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS', 'credentials.json')
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 # The ID of the folder to sync is now passed per workspace.
 
