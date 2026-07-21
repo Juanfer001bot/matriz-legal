@@ -554,6 +554,7 @@
                         <label><input type="checkbox" class="inc-class-cb" value="Seguridad y Salud"> Seguridad y Salud (ISO 45001)</label>
                         <label><input type="checkbox" class="inc-class-cb" value="Energía"> Energía (ISO 50001)</label>
                         <label><input type="checkbox" class="inc-class-cb" value="Seguridad Vial"> Seguridad Vial (ISO 39001)</label>
+                        <label><input type="checkbox" class="inc-class-cb" value="Gestión de Activos"> Gestión de Activos (ISO 55001)</label>
                     </div>
                 </div>
 
@@ -677,6 +678,47 @@
                             <div><label>Disposición Inmediata</label><input type="text" id="inc_90_disposicion"></div>
                         </div>
                     </div>
+
+                    <!-- Módulo ISO 55001 -->
+                    <div class="form-section inc-module" id="mod_55001" style="display: none; border-left: 4px solid #9c89b8;">
+                        <h3 style="color: #9c89b8;">Módulo ISO 55001 (Gestión de Activos)</h3>
+                        <div class="grid-2">
+                            <div><label>Identificación del Activo (TAG/Serie)</label><input type="text" id="inc_55_activo"></div>
+                            <div><label>Categoría / Tipo de Activo</label><input type="text" id="inc_55_categoria" placeholder="Electromecánico, flota, etc."></div>
+                            <div>
+                                <label>Criticidad del Activo</label>
+                                <select id="inc_55_criticidad">
+                                    <option value="">Seleccione...</option>
+                                    <option value="Alta">Alta</option>
+                                    <option value="Media">Media</option>
+                                    <option value="Baja">Baja</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Fase del Ciclo de Vida</label>
+                                <select id="inc_55_ciclo">
+                                    <option value="">Seleccione...</option>
+                                    <option value="Diseño / Adquisición">Diseño / Adquisición</option>
+                                    <option value="Instalación / Puesta en marcha">Instalación / Puesta en marcha</option>
+                                    <option value="Operación">Operación</option>
+                                    <option value="Mantenimiento preventivo / correctivo">Mantenimiento preventivo / correctivo</option>
+                                    <option value="Desincorporación / Disposición final">Desincorporación / Disposición final</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>Impacto en Nivel de Servicio (LoS)</label>
+                                <select id="inc_55_los">
+                                    <option value="">Seleccione...</option>
+                                    <option value="Parada total">Parada total (Se detuvo operación principal)</option>
+                                    <option value="Degradación">Degradación del rendimiento</option>
+                                    <option value="Sin impacto">Sin impacto operativo directo</option>
+                                </select>
+                            </div>
+                            <div><label>Historial de Intervenciones</label><input type="text" id="inc_55_historial" placeholder="Fecha últ. mant. o hs de uso"></div>
+                            <div><label>Impacto Financiero Directo</label><input type="text" id="inc_55_costo_dir" placeholder="Costo reparación/reemplazo"></div>
+                            <div><label>Impacto Financiero Indirecto</label><input type="text" id="inc_55_costo_indir" placeholder="Lucro cesante"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 4. Corrección Inmediata -->
@@ -733,6 +775,7 @@
                         <label><input type="checkbox" class="inc-update-cb" value="Matriz 50001"> Revisión Energética (50001)</label>
                         <label><input type="checkbox" class="inc-update-cb" value="Matriz 45001"> Matriz IPERC (45001)</label>
                         <label><input type="checkbox" class="inc-update-cb" value="Matriz 39001"> Factores Desempeño (39001)</label>
+                        <label><input type="checkbox" class="inc-update-cb" value="Matriz 55001"> Gestión de Activos (55001)</label>
                     </div>
                     
                     <div style="margin-top: 15px; display: flex; gap: 20px;">
