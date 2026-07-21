@@ -1127,6 +1127,7 @@ document.querySelectorAll('.inc-class-cb').forEach(cb => {
         if (val === 'Medio Ambiente') document.getElementById('mod_14001').style.display = checked ? 'block' : 'none';
         if (val === 'Energía') document.getElementById('mod_50001').style.display = checked ? 'block' : 'none';
         if (val === 'Calidad') document.getElementById('mod_9001').style.display = checked ? 'block' : 'none';
+        if (val === 'Gestión de Activos') document.getElementById('mod_55001').style.display = checked ? 'block' : 'none';
     });
 });
 
