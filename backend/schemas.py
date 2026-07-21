@@ -79,6 +79,9 @@ class ScraperInboxResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class BulkDeleteRequest(BaseModel):
+    item_ids: List[int]
+
 class ActionPlanBase(BaseModel):
     workspace_id: Optional[int] = None
     requirement_id: Optional[int] = None

@@ -333,6 +333,17 @@ def discard_inbox_item(item_id: int, current_user: models.User = Depends(get_cur
     db.commit()
     return {"status": "ok"}
 
+@app.post("/api/inbox/bulk-delete")
+def bulk_discard_inbox_items(request: schemas.BulkDeleteRequest, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403)
+    if not request.item_ids:
+        return {"status": "ok", "deleted": 0}
+        
+    db.query(models.ScraperInbox).filter(models.ScraperInbox.id.in_(request.item_ids)).delete(synchronize_session=False)
+    db.commit()
+    return {"status": "ok", "deleted": len(request.item_ids)}
+
 # Action Plans Endpoints
 @app.get("/api/action-plans", response_model=List[schemas.ActionPlanResponse])
 def get_action_plans(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
