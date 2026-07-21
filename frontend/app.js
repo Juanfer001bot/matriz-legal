@@ -117,7 +117,7 @@ async function fetchMe() {
                     workspaceSelect.appendChild(opt);
                 });
                 
-                if (user.workspaces.length > 1) {
+                if (user.workspaces.length > 0) {
                     workspaceContainer.style.display = 'flex';
                 }
                 currentWorkspaceId = workspaceSelect.value;
