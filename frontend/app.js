@@ -1441,7 +1441,10 @@ if (chkShowObsoleteDocs) {
 
 async function fetchDocuments() {
     try {
-        const response = await fetch(`/api/documents?workspace_id=${currentWorkspaceId}`);
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/documents?workspace_id=${currentWorkspaceId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         allDocuments = await response.json();
         renderDocuments(allDocuments);
     } catch (e) {
@@ -1608,9 +1611,13 @@ function setupWorkflowButtons(doc) {
 async function changeDocumentStatus(id, newStatus) {
     if (!confirm(`¿Estás seguro de cambiar el estado a ${newStatus}?`)) return;
     try {
+        const token = localStorage.getItem('token');
         const response = await fetch(`/api/documents/${id}/status`, {
             method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ nuevo_estado: newStatus, comentario: "Cambio de flujo" })
         });
         if (response.ok) {
@@ -1657,9 +1664,13 @@ if (docForm) {
         }
 
         try {
+            const token = localStorage.getItem('token');
             const response = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(payload)
             });
             if (response.ok) {
@@ -1699,7 +1710,11 @@ if (btnAcknowledge) {
     btnAcknowledge.addEventListener('click', async () => {
         const id = document.getElementById('doc_id').value;
         try {
-            const res = await fetch(`/api/documents/${id}/acknowledge`, { method: 'POST' });
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/documents/${id}/acknowledge`, { 
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 if (data.status === 'already_acknowledged') {
@@ -1730,7 +1745,10 @@ if (btnViewAudit) {
         
         // Fetch audit
         try {
-            const resAudit = await fetch(`/api/documents/${id}/audit`);
+            const token = localStorage.getItem('token');
+            const resAudit = await fetch(`/api/documents/${id}/audit`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const auditData = await resAudit.json();
             const auditBody = document.getElementById('docAuditLogBody');
             auditBody.innerHTML = '';
@@ -1744,7 +1762,9 @@ if (btnViewAudit) {
             });
             
             // Fetch receipts
-            const resReceipts = await fetch(`/api/documents/${id}/receipts`);
+            const resReceipts = await fetch(`/api/documents/${id}/receipts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const receiptData = await resReceipts.json();
             const recBody = document.getElementById('docReceiptsBody');
             recBody.innerHTML = '';
