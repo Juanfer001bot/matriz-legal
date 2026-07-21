@@ -2,7 +2,7 @@ import os
 import re
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from models import Document
+from .models import Document
 from sqlalchemy.orm import Session
 from datetime import datetime
 
