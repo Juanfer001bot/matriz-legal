@@ -1354,4 +1354,33 @@ if (btnExportIncidentPDF) {
     });
 }
 
+// Logic to create an Action Plan directly from the Incident Modal
+const btnCreateActionFromIncident = document.getElementById('btnCreateActionFromIncident');
+if (btnCreateActionFromIncident) {
+    btnCreateActionFromIncident.addEventListener('click', () => {
+        const incId = document.getElementById('inc_id').value;
+        if (!incId) {
+            alert("Primero debes GUARDAR este incidente para que se le asigne un número de ID.");
+            return;
+        }
+        
+        // Cierra el modal de incidentes
+        if (modalIncident) modalIncident.classList.remove('active');
+        
+        // Abre la sección de planes de acción programáticamente
+        const tabBtn = document.getElementById('btnActionPlans');
+        if (tabBtn) tabBtn.click();
+        
+        // Abre el modal de nuevo plan de acción
+        const addBtn = document.getElementById('btnNewActionPlan');
+        if (addBtn) addBtn.click();
+        
+        // Pre-carga el ID del incidente en el campo origen de la NC
+        setTimeout(() => {
+            const origenInput = document.getElementById('ap_origen_nc');
+            if (origenInput) origenInput.value = `Incidente #${incId}`;
+        }, 300);
+    });
+}
+
 
