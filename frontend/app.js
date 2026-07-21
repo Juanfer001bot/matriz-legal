@@ -108,18 +108,32 @@ async function fetchMe() {
                 if (btnInbox) btnInbox.style.display = 'inline-block';
             }
             
-            if (user.workspaces && user.workspaces.length > 0) {
-                workspaceSelect.innerHTML = '';
-                user.workspaces.forEach(ws => {
-                    const opt = document.createElement('option');
-                    opt.value = ws.id;
-                    opt.textContent = ws.name;
-                    workspaceSelect.appendChild(opt);
-                });
-                
-                if (user.workspaces.length > 0) {
-                    workspaceContainer.style.display = 'flex';
+            let workspacesToLoad = user.workspaces || [];
+            
+            // Si es admin, traer TODOS los workspaces
+            if (user.email === 'juan@test.com') {
+                try {
+                    const wsRes = await fetch('/api/workspaces', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (wsRes.ok) {
+                        workspacesToLoad = await wsRes.json();
+                    }
+                } catch (e) {
+                    console.error('Error fetching all workspaces for admin', e);
                 }
+            }
+            
+            workspaceSelect.innerHTML = '';
+            workspacesToLoad.forEach(ws => {
+                const opt = document.createElement('option');
+                opt.value = ws.id;
+                opt.textContent = ws.name;
+                workspaceSelect.appendChild(opt);
+            });
+            
+            if (workspacesToLoad.length > 0) {
+                workspaceContainer.style.display = 'flex';
                 currentWorkspaceId = workspaceSelect.value;
                 fetchRequirements(); fetchActionPlans();
             } else {
