@@ -34,6 +34,36 @@ workspaceSelect.addEventListener('change', () => {
     fetchRequirements(); fetchActionPlans();
 });
 
+const btnConfigWorkspace = document.getElementById('btnConfigWorkspace');
+if (btnConfigWorkspace) {
+    btnConfigWorkspace.addEventListener('click', async () => {
+        if (!currentWorkspaceId) return;
+        const driveFolderId = prompt('Pega aquí el ID de la carpeta de Google Drive para este equipo (ej. 1A2b3C4d5E...):');
+        if (driveFolderId !== null) {
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`/api/workspaces/${currentWorkspaceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ drive_folder_id: driveFolderId })
+                });
+                if (res.ok) {
+                    alert('ID de Google Drive guardado correctamente para este equipo.');
+                } else {
+                    const error = await res.json();
+                    alert(`Error: ${error.detail || 'No se pudo guardar.'}`);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Fallo de conexión.');
+            }
+        }
+    });
+}
+
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
     fetchMe();
@@ -1450,6 +1480,42 @@ async function fetchDocuments() {
     } catch (e) {
         console.error(e);
     }
+}
+
+const btnSyncDrive = document.getElementById('btnSyncDrive');
+if (btnSyncDrive) {
+    btnSyncDrive.addEventListener('click', async () => {
+        if (!currentWorkspaceId) {
+            alert('Debes seleccionar un espacio de trabajo primero.');
+            return;
+        }
+        if (!confirm('¿Deseas iniciar una sincronización manual con Google Drive? Esto puede tardar unos segundos.')) return;
+        
+        btnSyncDrive.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Sincronizando...';
+        btnSyncDrive.disabled = true;
+        
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/documents/sync-drive?workspace_id=${currentWorkspaceId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                alert(data.message || 'Sincronización completada.');
+                fetchDocuments();
+            } else {
+                alert(`Error en sincronización: ${data.detail || data.message || 'Error desconocido'}`);
+            }
+        } catch(e) {
+            console.error(e);
+            alert('Fallo al conectar con el servidor.');
+        } finally {
+            btnSyncDrive.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M21 13a9 9 0 1 1-3-7.7L21 8"></path></svg> Sincronizar Drive';
+            btnSyncDrive.disabled = false;
+        }
+    });
 }
 
 function getStatusBadge(status) {

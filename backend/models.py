@@ -13,7 +13,8 @@ user_workspaces = Table(
 class Workspace(Base):
     __tablename__ = "workspaces"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+    name = Column(String, unique=True, index=True)
+    drive_folder_id = Column(String, nullable=True)
     
     users = relationship("User", secondary=user_workspaces, back_populates="workspaces")
     requirements = relationship("LegalRequirement", back_populates="workspace")

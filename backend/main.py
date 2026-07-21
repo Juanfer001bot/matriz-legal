@@ -20,6 +20,8 @@ from .chatbot import get_chatbot_response
 from .notifications import send_telegram_alert, TELEGRAM_BOT_TOKEN, send_email_alert
 from .auth import verify_password, get_password_hash, create_access_token, get_current_user
 
+from drive_sync import sync_drive_folder
+
 # Inicializar Base de Datos
 init_db()
 
@@ -51,10 +53,27 @@ def on_startup():
     tz = ZoneInfo('America/Argentina/Buenos_Aires')
     trigger = CronTrigger(hour=8, minute=0, timezone=tz)
     scheduler.add_job(scheduled_scraping, trigger)
+    
+    # Sincronización semanal de Google Drive (Domingos a las 3:00 AM AR)
+    drive_trigger = CronTrigger(day_of_week='sun', hour=3, minute=0, timezone=tz)
+    def drive_sync_job():
+        db = SessionLocal()
+        try:
+            print("[CRON] Ejecutando sincronización con Google Drive...")
+            workspaces = db.query(models.Workspace).filter(models.Workspace.drive_folder_id != None).all()
+            for ws in workspaces:
+                print(f"[CRON] Sincronizando Workspace {ws.name} ({ws.id}) - Folder: {ws.drive_folder_id}")
+                res = sync_drive_folder(db, workspace_id=ws.id, folder_id=ws.drive_folder_id)
+                print(f"[CRON] Drive Sync Result: {res}")
+        except Exception as e:
+            print(f"Error en Drive Sync CRON: {e}")
+        finally:
+            db.close()
+    
+    scheduler.add_job(drive_sync_job, drive_trigger)
+    
     scheduler.start()
-    print("[CRON] Reloj biológico interno iniciado (alarma a las 8:00 AM AR).")
-
-# Auth Endpoints
+    print("[CRON] Reloj biológico interno iniciado (alarmas a las 8:00 AM y Domingos 3:00 AM AR).")# Auth Endpoints
 @app.post("/api/register", response_model=schemas.UserResponse)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if current_user.email != "juan@test.com":
@@ -122,6 +141,21 @@ def create_workspace(workspace: schemas.WorkspaceCreate, db: Session = Depends(g
             db.add(req_clone)
         db.commit()
     return new_ws
+
+@app.put("/api/workspaces/{workspace_id}", response_model=schemas.WorkspaceResponse)
+def update_workspace(workspace_id: int, workspace: schemas.WorkspaceUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    db_ws = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
+    if not db_ws:
+        raise HTTPException(status_code=404, detail="Workspace no encontrado")
+    
+    if workspace.drive_folder_id is not None:
+        db_ws.drive_folder_id = workspace.drive_folder_id
+        
+    db.commit()
+    db.refresh(db_ws)
+    return db_ws
 
 @app.delete("/api/workspaces/{workspace_id}")
 def delete_workspace(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -724,6 +758,17 @@ def delete_incident(incident_id: int, db: Session = Depends(get_db), current_use
 # ==========================================
 from datetime import datetime
 
+@app.post("/api/documents/sync-drive")
+def manual_drive_sync(workspace_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    # Solo el admin puede lanzar sincronización manual
+    if current_user.email != "juan@test.com":
+        raise HTTPException(status_code=403, detail="No autorizado.")
+    ws = db.query(models.Workspace).filter(models.Workspace.id == workspace_id).first()
+    if not ws or not ws.drive_folder_id:
+        raise HTTPException(status_code=400, detail="Este equipo no tiene una carpeta de Google Drive configurada.")
+    result = sync_drive_folder(db, workspace_id, folder_id=ws.drive_folder_id)
+    return result
+
 @app.get("/api/documents")
 def get_documents(workspace_id: int = None, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     query = db.query(models.Document)
@@ -867,7 +912,14 @@ def migrate_participacion(db: Session = Depends(get_db)):
     except Exception:
         pass
         
-    return {"status": "success", "message": "Tablas creadas con éxito"}
+    try:
+        db.execute(text("ALTER TABLE workspaces ADD COLUMN drive_folder_id VARCHAR;"))
+        db.commit()
+    except Exception:
+        db.rollback()
+        pass
+
+    return {"status": "ok", "message": "Tablas creadas y actualizadas con éxito."}
 
 
 @app.get("/api/bot/migrate-kobo")

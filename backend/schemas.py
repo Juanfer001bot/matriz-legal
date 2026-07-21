@@ -7,6 +7,10 @@ class Token(BaseModel):
 
 class WorkspaceBase(BaseModel):
     name: str
+    drive_folder_id: Optional[str] = None
+
+class WorkspaceUpdate(BaseModel):
+    drive_folder_id: Optional[str] = None
 
 class WorkspaceCreate(WorkspaceBase):
     pass
