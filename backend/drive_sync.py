@@ -15,7 +15,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 # Regex for "TTT-SSS-NNN Titulo Rev.nn"
 # Example: PRO-HYS-001 Procedimiento de Investigaciones Rev.00
 # Extensión del archivo puede estar al final, ej: .pdf, .docx
-FILE_PATTERN = re.compile(r'^([A-Z]{3})-([A-Z]{3})-(\d{3})\s+(.*?)\s+Rev\.(\d{2})(?:\.\w+)?$')
+FILE_PATTERN = re.compile(r'^([A-Z]{3})-([A-Z]{3})-(\d+)\s+(.*?)\s+Rev\.?(\d+)(?:\.\w+)?$', re.IGNORECASE)
 
 def get_tipo_from_codigo(ttt: str) -> str:
     mapping = {
