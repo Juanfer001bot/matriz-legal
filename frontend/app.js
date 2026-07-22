@@ -38,8 +38,15 @@ const btnConfigWorkspace = document.getElementById('btnConfigWorkspace');
 if (btnConfigWorkspace) {
     btnConfigWorkspace.addEventListener('click', async () => {
         if (!currentWorkspaceId) return;
-        const driveFolderId = prompt('Pega aquí el ID de la carpeta de Google Drive para este equipo (ej. 1A2b3C4d5E...):');
-        if (driveFolderId !== null) {
+        const selectedOption = workspaceSelect.options[workspaceSelect.selectedIndex];
+        const currentId = selectedOption.dataset.driveFolderId || '';
+        
+        const driveFolderId = prompt(
+            'ID de la carpeta de Google Drive para este equipo:\n(Si ya hay uno configurado, aparecerá abajo. Modifícalo solo si deseas cambiarlo)',
+            currentId
+        );
+        
+        if (driveFolderId !== null && driveFolderId !== currentId) {
             try {
                 const token = localStorage.getItem('token');
                 const res = await fetch(`/api/workspaces/${currentWorkspaceId}`, {
@@ -51,6 +58,7 @@ if (btnConfigWorkspace) {
                     body: JSON.stringify({ drive_folder_id: driveFolderId })
                 });
                 if (res.ok) {
+                    selectedOption.dataset.driveFolderId = driveFolderId;
                     alert('ID de Google Drive guardado correctamente para este equipo.');
                 } else {
                     const error = await res.json();
@@ -129,6 +137,7 @@ async function fetchMe() {
                 const opt = document.createElement('option');
                 opt.value = ws.id;
                 opt.textContent = ws.name;
+                opt.dataset.driveFolderId = ws.drive_folder_id || '';
                 workspaceSelect.appendChild(opt);
             });
             
